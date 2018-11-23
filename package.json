@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/kaiplanet/audio-wave#readme",
   "dependencies": {
+    "@types/node": "^10.12.10",
     "three": "^0.98.0",
     "ts-loader": "^5.3.0"
   },
