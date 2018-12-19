@@ -1,11 +1,21 @@
 import * as THREE from "three";
 
-export default class AudioWaves {
+import Water from "./objects/Water";
+
+interface IAudioWaves {
+    init(width: number, height: number): IAudioWaves;
+    mount(mountPoint: HTMLElement): HTMLElement;
+    start(): IAudioWaves;
+}
+
+export default class implements IAudioWaves {
     private renderer: THREE.WebGLRenderer;
     private scene: THREE.Scene;
     private camera: THREE.PerspectiveCamera;
     private light: THREE.DirectionalLight;
     private active: boolean;
+
+    private water: Water;
 
     public init(width: number, height: number) {
         this.scene = new THREE.Scene();
@@ -39,14 +49,24 @@ export default class AudioWaves {
         if (process.env.NODE_ENV === "development") {
             this.scene.add(new THREE.DirectionalLightHelper(this.light));
         }
+
+        const water = new Water();
+
+        water.addTo(this.scene, new THREE.Vector3(0, 0, 0));
+        this.water = water;
+
+        return this;
     }
 
     public mount(mountPoint: HTMLElement) {
         mountPoint.appendChild(this.renderer.domElement);
+
+        return mountPoint;
     }
 
     public start() {
         this.active = true;
+        this.water.startSimulation();
 
         const render = () => {
             if (this.active) {
@@ -56,6 +76,17 @@ export default class AudioWaves {
             this.renderer.render(this.scene, this.camera);
         };
 
-        requestAnimationFrame(render);
+        // requestAnimationFrame(render);
+
+        return this;
+    }
+
+    public stop() {
+        this.water.stopSimulation();
+        this.active = false;
+    }
+
+    public generateWave(position: { x: number, y: number }, height: number, period = 1000) {
+        this.water.generateWave(new THREE.Vector2(position.x, position.y), height, period);
     }
 }

@@ -30,6 +30,10 @@ module.exports = {
                 exclude: /node_modules/,
                 enforce: 'pre',
                 loader: 'tslint-loader'
+            },
+            {
+                test: /\.glsl$/,
+                loader: 'raw-loader'
             }
         ]
     },
@@ -42,6 +46,6 @@ module.exports = {
         })
     ],
     resolve: {
-        extensions: [ '.ts', '.js' ]
+        extensions: [ '.ts', '.glsl', '.js' ]
     }
 };
