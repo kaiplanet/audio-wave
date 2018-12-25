@@ -76,7 +76,7 @@ export default class implements IAudioWaves {
             this.renderer.render(this.scene, this.camera);
         };
 
-        // requestAnimationFrame(render);
+        requestAnimationFrame(render);
 
         return this;
     }

@@ -5,17 +5,20 @@ import Body from "./Body";
 
 import { waterShaderLib } from "../shaders/ShaderLib";
 
-const WIDTH = 100;
-const HEIGHT = 100;
-const EXTERNAL_COORDS_ORIGIN_X = WIDTH / 2;
-const EXTERNAL_COORDS_ORIGIN_Y = HEIGHT / 2;
-const WAVE_SPEED = WIDTH / 10 / 1000; // Pixel per millisecond.
+const TEXTURE_WITDH = 512;
+const TEXTURE_HEIGHT = 512;
+const EXTERNAL_COORDS_ORIGIN_X = TEXTURE_WITDH / 2;
+const EXTERNAL_COORDS_ORIGIN_Y = TEXTURE_HEIGHT / 2;
+const WAVE_SPEED = TEXTURE_WITDH / 10 / 1000; // Pixel per millisecond.
 const DAMPING_RATIO = 0.0003;
 const MIN_ACTIVE_OFFSET = 0.05;
 
+const WIDTH = 600;
+const HEIGHT = 600;
 const RESOLUTION = 512;
 
 export default class extends Body {
+    private plane: THREE.Mesh;
     private waveSources: WaveSource[];
     private bumpMapCanvas: HTMLCanvasElement;
     private normalMapCanvas: HTMLCanvasElement;
@@ -27,10 +30,6 @@ export default class extends Body {
 
     public addTo(scene: THREE.scene, position: THREE.Vector3) {
         super.addTo(scene, position);
-
-        if (process.env.NODE_ENV === "development") {
-            scene.add(new THREE.VertexNormalsHelper(this.objects[0], 2, 0x000000, 1));
-        }
 
         return this;
     }
@@ -53,12 +52,12 @@ export default class extends Body {
 
             let maxOffsetAbs = 0;
 
-            const bumpMapImage = bumpMapCtx.createImageData(WIDTH, HEIGHT);
-            const normalMapImage = normalMapCtx.createImageData(WIDTH, HEIGHT);
+            const bumpMapImage = bumpMapCtx.createImageData(TEXTURE_WITDH, TEXTURE_HEIGHT);
+            const normalMapImage = normalMapCtx.createImageData(TEXTURE_WITDH, TEXTURE_HEIGHT);
 
-            new Array(WIDTH * HEIGHT).fill(null).map((el: any, index: number) => {
-                const x = index % WIDTH;
-                const y = Math.floor(index / WIDTH);
+            new Array(TEXTURE_WITDH * TEXTURE_HEIGHT).fill(null).map((el: any, index: number) => {
+                const x = index % TEXTURE_WITDH;
+                const y = Math.floor(index / TEXTURE_WITDH);
                 const position = new THREE.Vector2(x, y);
 
                 let offset = 0;
@@ -91,16 +90,24 @@ export default class extends Body {
                             return new THREE.Vector3(0, 0, 0);
                         }
 
-                        // f'(wt) = A(e^-βt)cos(ωt + φ)
-                        const gradient = amplitude * Math.exp(-DAMPING_RATIO * timeDiff) *
-                            Math.cos(angularFrequency * timeDiff);
+                        // f'(t) = A((-βe^-βt)sin(ωt + φ) + (e^-βt)ωcos(ωt + φ)),
+                        // t = (timestamp - waveSource.timestamp) - distance / WAVE_SPEED,
+                        // f'(distance) = A((-βe^-βt)sin(ωt + φ) + (e^-βt)ωcos(ωt + φ)) / -WAVE_SPEED.
+                        const gradient = amplitude *
+                            (-DAMPING_RATIO * Math.exp(-DAMPING_RATIO * timeDiff) *
+                            Math.sin(angularFrequency * timeDiff) +
+                            Math.exp(-DAMPING_RATIO * timeDiff) *
+                            angularFrequency * Math.cos(angularFrequency * timeDiff)) / -WAVE_SPEED;
 
                         const tangentVector = new THREE.Vector2(1, gradient);
-                        const NormalVector2D = new THREE.Vector2(1, tangentVector.x / tangentVector.y * -1);
+                        const NormalVector2D = new THREE.Vector2(tangentVector.y / tangentVector.x * -1, 1);
                         const directionVector = position.sub(waveSource.position);
-                        const normalVectorY = directionVector.length() * NormalVector2D.y / NormalVector2D.x;
 
-                        return new THREE.Vector3(directionVector.x, normalVectorY, directionVector.y).normalize();
+                        const normalVectorX = NormalVector2D.x > 0 ? directionVector.x : -directionVector.x;
+                        const normalVectorY = directionVector.length() * NormalVector2D.y / Math.abs(NormalVector2D.x);
+                        const normalVectorZ = NormalVector2D.x > 0 ? directionVector.z : -directionVector.z;
+
+                        return new THREE.Vector3(normalVectorX, normalVectorY, normalVectorZ).normalize();
                     })();
 
                     normalVector.add(normalVectorContribution);
@@ -150,6 +157,8 @@ export default class extends Body {
             if (maxOffsetAbs !== 0) {
                 bumpMapCtx.putImageData(bumpMapImage, 0, 0);
                 normalMapCtx.putImageData(normalMapImage, 0, 0);
+                this.plane.material.bumpMap.needsUpdate = true;
+                this.plane.material.normalMap.needsUpdate = true;
             }
 
             if (this.active) {
@@ -193,12 +202,12 @@ export default class extends Body {
         this.waveSources = [];
 
         this.bumpMapCanvas = document.createElement("canvas");
-        this.bumpMapCanvas.width = WIDTH;
-        this.bumpMapCanvas.height = HEIGHT;
+        this.bumpMapCanvas.width = TEXTURE_WITDH;
+        this.bumpMapCanvas.height = TEXTURE_HEIGHT;
 
         this.normalMapCanvas = document.createElement("canvas");
-        this.normalMapCanvas.width = WIDTH;
-        this.normalMapCanvas.height = HEIGHT;
+        this.normalMapCanvas.width = TEXTURE_WITDH;
+        this.normalMapCanvas.height = TEXTURE_HEIGHT;
 
         this.createPlane();
 
@@ -213,12 +222,26 @@ export default class extends Body {
 
     private createPlane() {
         const geometry = new THREE.PlaneGeometry(WIDTH, HEIGHT, RESOLUTION, RESOLUTION);
-        const texture = new THREE.CanvasTexture(this.bumpMapCanvas);
-        const material = new THREE.ShaderMaterial(waterShaderLib);
+        const bumpMap = new THREE.CanvasTexture(this.bumpMapCanvas);
+        const normalMap = new THREE.CanvasTexture(this.normalMapCanvas);
+
+        // const material = new THREE.ShaderMaterial({
+        //     ...waterShaderLib,
+        //
+        //     bumpMap,
+        //     normalMap,
+        //
+        //     lights: true,
+        // });
+
+        const material = new THREE.MeshPhongMaterial({ bumpMap, normalMap }); // TODO: remove later
+
         const plane = new THREE.Mesh(geometry, material);
-        // const plane = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0xffffff }));
+
         plane.rotation.set(Math.PI / -2, 0, 0);
         plane.receiveShadow = true;
+
+        this.plane = plane;
         this.objects.push(plane);
     }
 }

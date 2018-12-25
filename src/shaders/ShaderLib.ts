@@ -25,17 +25,13 @@ const waterShaderLib: IShaderLib = {
         UniformsLib.fog,
         UniformsLib.lights,
         {
-            diffuse: { value: new THREE.Color(0xffffff) },
             emissive: { value: new THREE.Color( 0x000000 ) },
-
         },
     ]),
 
     vertexShader: water_vert,
 
     fragmentShader: ShaderChunk.meshlambert_frag,
-
-    lights: true,
 };
 
 export { waterShaderLib };
