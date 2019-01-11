@@ -21,5 +21,5 @@ toolBar.querySelector(".generate-wave").addEventListener("click", () => {
     const height = +(toolBar.querySelector(".height") as HTMLInputElement).value;
     const period = +(toolBar.querySelector(".period") as HTMLInputElement).value;
 
-    audioWaves.generateWave({ x, y }, height, period);
+    // audioWaves.generateWave();
 });

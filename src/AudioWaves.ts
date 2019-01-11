@@ -18,12 +18,12 @@ export default class implements IAudioWaves {
     private water: Water;
 
     public init(width: number, height: number) {
-        this.scene = new THREE.Scene();
-
         this.renderer = new THREE.WebGLRenderer();
         this.renderer.setSize(width, height);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        this.scene = new THREE.Scene();
 
         if (process.env.NODE_ENV === "development") {
             this.scene.add(new THREE.AxesHelper(20));
@@ -31,7 +31,7 @@ export default class implements IAudioWaves {
 
         this.camera = new THREE.PerspectiveCamera(45, width / height, .1, 1000);
         this.camera.position.set(0, 600, 600);
-        this.camera.lookAt(0, 0, 0);
+        this.camera.lookAt(this.scene.position);
 
         this.scene.add(new THREE.AmbientLight(0x404040));
 
@@ -86,7 +86,7 @@ export default class implements IAudioWaves {
         this.active = false;
     }
 
-    public generateWave(position: { x: number, y: number }, height: number, period = 1000) {
-        this.water.generateWave(new THREE.Vector2(position.x, position.y), height, period);
+    public generateWave(sourceTexture: ImageData, { x, y }: { x: number, y: number }) {
+        this.water.generateWave(sourceTexture, new THREE.Vector2(x, y));
     }
 }

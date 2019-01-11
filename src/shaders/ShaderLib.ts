@@ -5,7 +5,7 @@ import { ShaderLib } from "three/src/renderers/shaders/ShaderLib";
 import { UniformsLib } from "three/src/renderers/shaders/UniformsLib";
 import { UniformsUtils } from "three/src/renderers/shaders/UniformsUtils";
 
-import { water_vert } from "./ShaderChunk";
+import {  meanfilter_frag, meanfilter_vert, water_vert, waterbumpmap_frag, waterbumpmap_vert } from "./ShaderChunk";
 
 interface IShaderLib {
     uniforms: object;
@@ -34,4 +34,22 @@ const waterShaderLib: IShaderLib = {
     fragmentShader: ShaderChunk.meshlambert_frag,
 };
 
-export { waterShaderLib };
+const waterBumpMapShaderLib: IShaderLib = {
+    uniforms: { },
+
+    vertexShader: waterbumpmap_vert,
+
+    fragmentShader: waterbumpmap_frag,
+};
+
+const meanFilterShaderLib: IShaderLib = {
+    uniforms: {
+        tDiffuse: { type: "t", value: null },
+    },
+
+    vertexShader: meanfilter_vert,
+
+    fragmentShader: meanfilter_frag,
+};
+
+export { waterShaderLib, waterBumpMapShaderLib, meanFilterShaderLib };

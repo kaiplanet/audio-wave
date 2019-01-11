@@ -1,7 +1,10 @@
 'use strict';
 
-const HtmlWebpackPlugin = require('html-webpack-plugin');
+
 const path = require('path');
+
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ThreeWebpackPlugin = require('@wildpeaks/three-webpack-plugin');
 
 const rootDir = path.resolve(__dirname, '..');
 
@@ -43,7 +46,8 @@ module.exports = {
             inject: 'body',
             template: path.resolve(rootDir, 'demo', 'index.html'),
             chunks: [ 'main' ]
-        })
+        }),
+        new ThreeWebpackPlugin()
     ],
     resolve: {
         extensions: [ '.ts', '.glsl', '.js' ]

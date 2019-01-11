@@ -1,9 +1,15 @@
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/js/postprocessing/EffectComposer";
+import { RenderPass } from "three/examples/js/postprocessing/RenderPass";
+import { ShaderPass } from "three/examples/js/postprocessing/ShaderPass";
+import { CopyShader } from "three/examples/js/shaders/CopyShader";
 
-import WaveSource from "../physics/WaveSource";
+THREE.CopyShader = CopyShader;
+THREE.RenderPass = ShaderPass;
+
 import Body from "./Body";
 
-import { waterShaderLib } from "../shaders/ShaderLib";
+import { meanFilterShaderLib, waterBumpMapShaderLib, waterShaderLib } from "../shaders/ShaderLib";
 
 const TEXTURE_WITDH = 512;
 const TEXTURE_HEIGHT = 512;
@@ -19,13 +25,21 @@ const RESOLUTION = 512;
 
 export default class extends Body {
     private plane: THREE.Mesh;
-    private waveSources: WaveSource[];
-    private bumpMapCanvas: HTMLCanvasElement;
-    private normalMapCanvas: HTMLCanvasElement;
     private active = false;
+    private bufferTarget: THREE.WebGLRenderTarget;
+    private bufferContext: WebGLRenderingContext;
+    private bufferRenderer: THREE.WebGLRenderer;
+    private bufferComposer: EffectComposer;
+    private bufferScene: THREE.Scene;
+    private bufferSceneCamera: THREE.Camera;
+    private isSizeSet = false;
+    private bufferMaterial: THREE.ShaderMaterial;
+    private clock: THREE.Clock;
 
     constructor() {
         super();
+
+        this.clock = new THREE.Clock();
     }
 
     public addTo(scene: THREE.scene, position: THREE.Vector3) {
@@ -39,127 +53,38 @@ export default class extends Body {
             return;
         }
 
-        const bumpMapCtx = this.bumpMapCanvas.getContext("2d");
-        const normalMapCtx = this.normalMapCanvas.getContext("2d");
-
         const tick = () => {
-            if (!this.waveSources.length) {
-                return requestAnimationFrame(tick);
+            const MAX_DELTA = 1000 / 60 * 1.2;
+
+            let delta = this.clock.getDelta() * 1000;
+
+            if (delta > MAX_DELTA) {
+                delta = MAX_DELTA;
             }
 
-            const waveSourceTouched = [];
-            const timestamp = Date.now();
+            this.bufferMaterial.uniforms.delta.value = delta;
 
-            let maxOffsetAbs = 0;
+            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, this.bufferTarget);
+            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera);  // TODO：remove
+            // this.bufferComposer.render(delta);
 
-            const bumpMapImage = bumpMapCtx.createImageData(TEXTURE_WITDH, TEXTURE_HEIGHT);
-            const normalMapImage = normalMapCtx.createImageData(TEXTURE_WITDH, TEXTURE_HEIGHT);
+            // TODO: remove
+            const buffer = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 3);
 
-            new Array(TEXTURE_WITDH * TEXTURE_HEIGHT).fill(null).map((el: any, index: number) => {
-                const x = index % TEXTURE_WITDH;
-                const y = Math.floor(index / TEXTURE_WITDH);
-                const position = new THREE.Vector2(x, y);
+            this.bufferRenderer.readRenderTargetPixels(this.bufferTarget, 0, 0, TEXTURE_WITDH, TEXTURE_HEIGHT, buffer);
+            // this.bufferRenderer
+            //  .readRenderTargetPixels(this.bufferComposer.renderTarget2, 0, 0, TEXTURE_WITDH, TEXTURE_HEIGHT, buffer);
 
-                let offset = 0;
-                let normalVector = new THREE.Vector3(0, 0, 0);
+            const texture1 = this.bufferMaterial.uniforms.bufferMapLast.value.clone();
+            const texture2 = this.bufferMaterial.uniforms.bufferMap.value.clone();
 
-                this.waveSources.forEach((waveSource: WaveSource, waveIndex: number) => {
-                    const distance = waveSource.position.distanceTo(position);
+            texture1.image.data = texture2.image.data;
+            texture1.needsUpdate = true;
+            texture2.image.data = buffer;
+            texture2.needsUpdate = true;
 
-                    // Timestamp when the wave reaches the point.
-                    const startTimestamp = waveSource.timestamp + distance / WAVE_SPEED;
-
-                    const timeDiff = timestamp - startTimestamp;
-                    const amplitude = waveSource.amplitude;
-                    const angularFrequency = 2 * Math.PI / waveSource.period;
-
-                    const offsetContribution = ((): number => {
-                        if (timeDiff < 0) {
-                            return 0;
-                        }
-
-                        // x = A(e^-βt)sin(ωt + φ).
-                        return amplitude * Math.exp(-DAMPING_RATIO * timeDiff) *
-                            Math.sin(angularFrequency * timeDiff);
-                    })();
-
-                    offset += offsetContribution;
-
-                    const normalVectorContribution = ((): THREE.Vector3 => {
-                        if (timeDiff < 0) {
-                            return new THREE.Vector3(0, 0, 0);
-                        }
-
-                        // f'(t) = A((-βe^-βt)sin(ωt + φ) + (e^-βt)ωcos(ωt + φ)),
-                        // t = (timestamp - waveSource.timestamp) - distance / WAVE_SPEED,
-                        // f'(distance) = A((-βe^-βt)sin(ωt + φ) + (e^-βt)ωcos(ωt + φ)) / -WAVE_SPEED.
-                        const gradient = amplitude *
-                            (-DAMPING_RATIO * Math.exp(-DAMPING_RATIO * timeDiff) *
-                            Math.sin(angularFrequency * timeDiff) +
-                            Math.exp(-DAMPING_RATIO * timeDiff) *
-                            angularFrequency * Math.cos(angularFrequency * timeDiff)) / -WAVE_SPEED;
-
-                        const tangentVector = new THREE.Vector2(1, gradient);
-                        const NormalVector2D = new THREE.Vector2(tangentVector.y / tangentVector.x * -1, 1);
-                        const directionVector = position.sub(waveSource.position);
-
-                        const normalVectorX = NormalVector2D.x > 0 ? directionVector.x : -directionVector.x;
-                        const normalVectorY = directionVector.length() * NormalVector2D.y / Math.abs(NormalVector2D.x);
-                        const normalVectorZ = NormalVector2D.x > 0 ? directionVector.z : -directionVector.z;
-
-                        return new THREE.Vector3(normalVectorX, normalVectorY, normalVectorZ).normalize();
-                    })();
-
-                    normalVector.add(normalVectorContribution);
-
-                    if (timestamp < startTimestamp || offsetContribution > MIN_ACTIVE_OFFSET) {
-                        waveSourceTouched[waveIndex] = true;
-                    }
-                });
-
-                if (Math.abs(offset) > maxOffsetAbs) {
-                    maxOffsetAbs = Math.abs(offset);
-                }
-
-                if (!normalVector.length()) {
-                    normalVector = new THREE.Vector3(0, 1, 0);
-                }
-
-                normalVector.normalize();
-
-                return { offset, normalVector };
-            }).forEach(({ offset, normalVector }: { offset: number, normalVector: THREE.Vector3 }, index: number) => {
-                if (maxOffsetAbs === 0) {
-                    return;
-                }
-
-                const dataIndex = index * 4;
-                const bumpMapImageData = bumpMapImage.data;
-                const normalMapImageData = normalMapImage.data;
-
-                bumpMapImageData[dataIndex] = Math.floor(128  + 128  * offset / maxOffsetAbs);
-                bumpMapImageData[dataIndex + 1] = 0;
-                bumpMapImageData[dataIndex + 2] = 0;
-                bumpMapImageData[dataIndex + 3] = 255;
-
-                normalMapImageData[dataIndex] = Math.floor(128  + 128  * normalVector.x);
-                normalMapImageData[dataIndex + 1] = Math.floor(128  + 128  * normalVector.y);
-                normalMapImageData[dataIndex + 2] = Math.floor(128  + 128  * normalVector.z);
-                normalMapImageData[dataIndex + 3] = 255;
-            });
-
-            if (waveSourceTouched.filter((el: boolean|undefined) => el).length !== this.waveSources.length) {
-                this.waveSources = this.waveSources.filter((waveSource: WaveSource, index) => {
-                    return waveSourceTouched[index];
-                });
-            }
-
-            if (maxOffsetAbs !== 0) {
-                bumpMapCtx.putImageData(bumpMapImage, 0, 0);
-                normalMapCtx.putImageData(normalMapImage, 0, 0);
-                this.plane.material.bumpMap.needsUpdate = true;
-                this.plane.material.normalMap.needsUpdate = true;
-            }
+            this.bufferMaterial.uniforms.bufferMapLast.value = texture1;
+            this.bufferMaterial.uniforms.bufferMap.value = texture2;
 
             if (this.active) {
                 requestAnimationFrame(tick);
@@ -180,50 +105,62 @@ export default class extends Body {
 
     /**
      * Generate a wave on the water face.
+     * @param {ImageData} sourceTexture - The texture describing the shape of the wave source.
      * @param {THREE.Vector2} position - The position of wave source.
      *      Waves are generate on the water surface, use THREE.Vector2.
      *      The range of each component is from -1 to 1.
-     * @param {number} height - Wave height
-     * @param {number} period - The vibration period of the wave source in milliseconds
      */
-    public generateWave(position: THREE.Vector2, height: number, period: number) {
-        this.waveSources.push(new WaveSource(({
-            amplitude: height / 2,
-            period,
-            position: position.applyMatrix3(new THREE.Matrix3().set(
-                EXTERNAL_COORDS_ORIGIN_X, 0, EXTERNAL_COORDS_ORIGIN_X,
-                0, -EXTERNAL_COORDS_ORIGIN_Y, EXTERNAL_COORDS_ORIGIN_Y,
-            )),
-            timestamp: Date.now(),
-        })));
+    public generateWave(sourceTexture: ImageData, position: THREE.Vector2) {
+        const textureUnit = this.bufferRenderer.properties.get(this.bufferTarget.texture).__webglTexture;
+
+        if (!textureUnit) {
+            return;
+        }
+
+        const ctx = this.bufferContext;
+        const activeTextureUnit = ctx.getParameter(ctx.TEXTURE_BINDING_2D);
+
+        ctx.bindTexture(ctx.TEXTURE_2D, textureUnit);
+
+        if (!this.isSizeSet) {
+            this.bufferContext.texImage2D(
+                ctx.TEXTURE_2D,
+                0,
+                ctx.RGB,
+                TEXTURE_WITDH,
+                TEXTURE_HEIGHT,
+                0,
+                ctx.RGB,
+                ctx.UNSIGNED_BYTE,
+                null,
+            );
+
+            this.isSizeSet = true;
+        }
+
+        ctx.texSubImage2D(
+            ctx.TEXTURE_2D,
+            0,
+            TEXTURE_WITDH / 2 + TEXTURE_WITDH / 2 * position.x,
+            TEXTURE_HEIGHT / 2 + TEXTURE_HEIGHT / 2 * position.y,
+            ctx.RGB,
+            ctx.UNSIGNED_BYTE,
+            sourceTexture,
+        );
+
+        ctx.generateMipmap(ctx.TEXTURE_2D);
+        ctx.bindTexture(ctx.TEXTURE_2D, activeTextureUnit);
     }
 
     protected init() {
-        this.waveSources = [];
-
-        this.bumpMapCanvas = document.createElement("canvas");
-        this.bumpMapCanvas.width = TEXTURE_WITDH;
-        this.bumpMapCanvas.height = TEXTURE_HEIGHT;
-
-        this.normalMapCanvas = document.createElement("canvas");
-        this.normalMapCanvas.width = TEXTURE_WITDH;
-        this.normalMapCanvas.height = TEXTURE_HEIGHT;
-
         this.createPlane();
-
-        const plane = this.objects[0];
-
-        plane.onBeforeRender = (renderer, scene, camera, geometry, material: THREE.Material) => {
-            // console.log(material);
-        };
+        this.initBufferScene();
 
         return this;
     }
 
-    private createPlane() {
-        const geometry = new THREE.PlaneGeometry(WIDTH, HEIGHT, RESOLUTION, RESOLUTION);
-        const bumpMap = new THREE.CanvasTexture(this.bumpMapCanvas);
-        const normalMap = new THREE.CanvasTexture(this.normalMapCanvas);
+    private createPlane(): THREE.Mesh {
+        const geometry = new THREE.PlaneGeometry(WIDTH, HEIGHT, 1, 1);
 
         // const material = new THREE.ShaderMaterial({
         //     ...waterShaderLib,
@@ -234,7 +171,7 @@ export default class extends Body {
         //     lights: true,
         // });
 
-        const material = new THREE.MeshPhongMaterial({ bumpMap, normalMap }); // TODO: remove later
+        const material = new THREE.MeshLambertMaterial(); // TODO: remove later
 
         const plane = new THREE.Mesh(geometry, material);
 
@@ -243,5 +180,122 @@ export default class extends Body {
 
         this.plane = plane;
         this.objects.push(plane);
+
+        return plane;
+    }
+
+    private initBufferScene(): this {
+        this.bufferRenderer = new THREE.WebGLRenderer();
+        this.bufferRenderer.setSize(TEXTURE_WITDH, TEXTURE_HEIGHT);
+        this.bufferContext = this.bufferRenderer.context;
+
+        this.bufferTarget = new THREE.WebGLRenderTarget(TEXTURE_WITDH, TEXTURE_HEIGHT, {
+            format: THREE.RGBFormat,
+        });
+
+        this.bufferScene = new THREE.Scene();
+
+        this.bufferSceneCamera = new THREE.OrthographicCamera(
+            TEXTURE_WITDH / -2, TEXTURE_WITDH / 2,
+            TEXTURE_HEIGHT / 2, TEXTURE_HEIGHT / -2,
+            0.1, 2);
+
+        this.bufferSceneCamera.position.set(0, 1, 0);
+        this.bufferSceneCamera.lookAt(this.bufferScene.position);
+
+        const geometry = new THREE.PlaneGeometry(TEXTURE_WITDH, TEXTURE_HEIGHT, 1, 1);
+
+        const textureData = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 3).map((el, index) => {
+            // TODO: remove
+            if (index % 3 === 0) {
+                return 128;
+            }
+
+            return 0;
+        });
+
+        const textureData0 = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 3).map((el, index) => {
+            if (index % 3 === 0) {
+                // TODO: remove
+                const distance = Math.sqrt(Math.pow(Math.abs(Math.round(index / 3 / 512) - 256), 2)
+                    + Math.pow(Math.abs(index / 3 % 512 - 256), 2));
+
+                // if (distance <= 1.5) {
+                //     return 127.5 + .5 * distance / 1.5;
+                // }
+
+                if (Math.round(index / 3 / 512) === 256 && index / 3 % 512 === 256) {
+                    return 0;
+                }
+
+                return 128;
+            }
+
+            return 0;
+        });
+
+        const texture = new THREE.DataTexture(
+            textureData,
+            TEXTURE_WITDH,
+            TEXTURE_HEIGHT,
+            THREE.RGBFormat,
+            THREE.UnsignedByteType,
+            THREE.UVMapping,
+            THREE.ClampToEdgeWrapping,
+            THREE.ClampToEdgeWrapping,
+            THREE.NearestFilter,
+            THREE.NearestFilter,
+        );
+
+        texture.needsUpdate = true;
+
+        const texture0 = new THREE.DataTexture(
+            textureData0,
+            TEXTURE_WITDH,
+            TEXTURE_HEIGHT,
+            THREE.RGBFormat,
+            THREE.UnsignedByteType,
+            THREE.UVMapping,
+            THREE.ClampToEdgeWrapping,
+            THREE.ClampToEdgeWrapping,
+            THREE.NearestFilter,
+            THREE.NearestFilter,
+        );
+
+        texture0.needsUpdate = true;
+
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                ...waterBumpMapShaderLib.uniforms,
+                bufferMap: { type: "t", value: texture },
+                bufferMapLast: { type: "t", value: texture0 },
+                delta: { type: "f", value: 0 },
+                resistanceFactor: {type: "f", value: 0 },
+                waveSpeed: { type: "f", value: 60 / 1000 / 3 }, // Pixels per millisecond.
+            },
+
+            vertexShader: waterBumpMapShaderLib.vertexShader,
+
+            fragmentShader: waterBumpMapShaderLib.fragmentShader,
+        });
+
+        const plane = new THREE.Mesh(geometry, material);
+
+        plane.position.set(0, 0, 0);
+        plane.rotation.set(-Math.PI / 2, 0, 0);
+
+        this.bufferScene.add(plane);
+        this.bufferMaterial = material;
+
+        // const renderPass = new RenderPass(this.bufferScene, this.bufferSceneCamera);
+        // const shaderPass = new ShaderPass(meanFilterShaderLib);
+        //
+        // shaderPass.renderToScreen = true; // TODO: remove
+        //
+        // this.bufferComposer = new EffectComposer(this.bufferRenderer, this.bufferTarget);
+        // this.bufferComposer.addPass(renderPass);
+        // this.bufferComposer.addPass(shaderPass);
+
+        return this;
     }
 }
