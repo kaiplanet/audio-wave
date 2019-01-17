@@ -9,15 +9,16 @@ THREE.RenderPass = ShaderPass;
 
 import Body from "./Body";
 
-import { meanFilterShaderLib, waterBumpMapShaderLib, waterShaderLib } from "../shaders/ShaderLib";
+import { waterNormalMapShaderLib, waterShaderLib } from "../shaders/ShaderLib";
+
+const WAVE_SPEED = 60 * .707731533050537209295072216; // Pixel per millisecond.
+const RESISTANCE_FACTOR = 0;
+const BOTTOM_HEIGHT = 5500;
 
 const TEXTURE_WITDH = 512;
 const TEXTURE_HEIGHT = 512;
 const EXTERNAL_COORDS_ORIGIN_X = TEXTURE_WITDH / 2;
 const EXTERNAL_COORDS_ORIGIN_Y = TEXTURE_HEIGHT / 2;
-const WAVE_SPEED = TEXTURE_WITDH / 10 / 1000; // Pixel per millisecond.
-const DAMPING_RATIO = 0.0003;
-const MIN_ACTIVE_OFFSET = 0.05;
 
 const WIDTH = 600;
 const HEIGHT = 600;
@@ -54,22 +55,30 @@ export default class extends Body {
         }
 
         const tick = () => {
-            const MAX_DELTA = 1000 / 60 * 1.2;
+            const MAX_DELTA = 1 / 60;
 
-            let delta = this.clock.getDelta() * 1000;
+            let delta = this.clock.getDelta();
 
-            if (delta > MAX_DELTA) {
-                delta = MAX_DELTA;
-            }
+            // if (delta > MAX_DELTA) {
+            delta = MAX_DELTA;
+            // }
 
-            this.bufferMaterial.uniforms.delta.value = delta;
+            const f1 = WAVE_SPEED * WAVE_SPEED * delta * delta;
+            const f2 = 1 / (RESISTANCE_FACTOR * delta + 2);
+            const k1 = (4 - 8 * f1) * f2;
+            const k2 = (RESISTANCE_FACTOR * delta - 2) * f2;
+            const k3 = 2 * f1 * f2;
+
+            this.bufferMaterial.uniforms.k1.value = k1;
+            this.bufferMaterial.uniforms.k2.value = k2;
+            this.bufferMaterial.uniforms.k3.value = k3;
 
             this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, this.bufferTarget);
             this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera);  // TODO：remove
             // this.bufferComposer.render(delta);
 
             // TODO: remove
-            const buffer = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 3);
+            const buffer = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 4);
 
             this.bufferRenderer.readRenderTargetPixels(this.bufferTarget, 0, 0, TEXTURE_WITDH, TEXTURE_HEIGHT, buffer);
             // this.bufferRenderer
@@ -85,9 +94,11 @@ export default class extends Body {
 
             this.bufferMaterial.uniforms.bufferMapLast.value = texture1;
             this.bufferMaterial.uniforms.bufferMap.value = texture2;
+            this.plane.material.uniforms.normalMap.value = texture2;
 
             if (this.active) {
                 requestAnimationFrame(tick);
+                // setTimeout(tick, 500);
             }
         };
 
@@ -152,6 +163,12 @@ export default class extends Body {
         ctx.bindTexture(ctx.TEXTURE_2D, activeTextureUnit);
     }
 
+    public mountTexture(mountPoint: HTMLElement) {
+        mountPoint.appendChild(this.bufferRenderer.domElement);
+
+        return mountPoint;
+    }
+
     protected init() {
         this.createPlane();
         this.initBufferScene();
@@ -160,18 +177,22 @@ export default class extends Body {
     }
 
     private createPlane(): THREE.Mesh {
-        const geometry = new THREE.PlaneGeometry(WIDTH, HEIGHT, 1, 1);
+        const geometry = new THREE.PlaneGeometry(WIDTH, HEIGHT, RESOLUTION, RESOLUTION);
 
-        // const material = new THREE.ShaderMaterial({
-        //     ...waterShaderLib,
-        //
-        //     bumpMap,
-        //     normalMap,
-        //
-        //     lights: true,
-        // });
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                ...waterShaderLib.uniforms,
+                normalMap: { type: "t", value: null },
+            },
 
-        const material = new THREE.MeshLambertMaterial(); // TODO: remove later
+            vertexShader: waterShaderLib.vertexShader,
+
+            fragmentShader: waterShaderLib.fragmentShader,
+
+            lights: true,
+        });
+
+        // const material = new THREE.MeshLambertMaterial(); // TODO: remove later
 
         const plane = new THREE.Mesh(geometry, material);
 
@@ -185,12 +206,12 @@ export default class extends Body {
     }
 
     private initBufferScene(): this {
-        this.bufferRenderer = new THREE.WebGLRenderer();
+        this.bufferRenderer = new THREE.WebGLRenderer({ alpha: true });
         this.bufferRenderer.setSize(TEXTURE_WITDH, TEXTURE_HEIGHT);
         this.bufferContext = this.bufferRenderer.context;
 
         this.bufferTarget = new THREE.WebGLRenderTarget(TEXTURE_WITDH, TEXTURE_HEIGHT, {
-            format: THREE.RGBFormat,
+            format: THREE.RGBAFormat,
         });
 
         this.bufferScene = new THREE.Scene();
@@ -205,28 +226,41 @@ export default class extends Body {
 
         const geometry = new THREE.PlaneGeometry(TEXTURE_WITDH, TEXTURE_HEIGHT, 1, 1);
 
-        const textureData = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 3).map((el, index) => {
+        const textureData = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 4).map((el, index) => {
             // TODO: remove
-            if (index % 3 === 0) {
+            if (index % 4 === 3) {
+                // TODO: remove
+                const distance = Math.sqrt(Math.pow(Math.abs(Math.floor(index / 4 / 512) - 256), 2)
+                    + Math.pow(Math.abs(index / 4 % 512 - 256), 2));
+
+                if (distance <= 30) {
+                    return 88 + 40 * Math.sin(Math.PI / 2 * distance / 30);
+                }
+
+                // if (Math.round(index / 4 / 512) === 256 && index / 4 % 512 === 256) {
+                //     return 110;
+                // }
+
                 return 128;
             }
 
             return 0;
         });
 
-        const textureData0 = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 3).map((el, index) => {
-            if (index % 3 === 0) {
+        const textureData0 = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 4).map((el, index) => {
+            // TODO: remove
+            if (index % 4 === 3) {
                 // TODO: remove
-                const distance = Math.sqrt(Math.pow(Math.abs(Math.round(index / 3 / 512) - 256), 2)
-                    + Math.pow(Math.abs(index / 3 % 512 - 256), 2));
+                const distance = Math.sqrt(Math.pow(Math.abs(Math.floor(index / 4 / 512) - 256), 2)
+                    + Math.pow(Math.abs(index / 4 % 512 - 256), 2));
 
-                // if (distance <= 1.5) {
-                //     return 127.5 + .5 * distance / 1.5;
-                // }
-
-                if (Math.round(index / 3 / 512) === 256 && index / 3 % 512 === 256) {
-                    return 0;
+                if (distance <= 30) {
+                    return 108 + 20 * Math.sin(Math.PI / 2 * distance / 30);
                 }
+
+                // if (Math.round(index / 4 / 512) === 256 && index / 4 % 512 === 256) {
+                //     return 110;
+                // }
 
                 return 128;
             }
@@ -238,7 +272,7 @@ export default class extends Body {
             textureData,
             TEXTURE_WITDH,
             TEXTURE_HEIGHT,
-            THREE.RGBFormat,
+            THREE.RGBAFormat,
             THREE.UnsignedByteType,
             THREE.UVMapping,
             THREE.ClampToEdgeWrapping,
@@ -253,7 +287,7 @@ export default class extends Body {
             textureData0,
             TEXTURE_WITDH,
             TEXTURE_HEIGHT,
-            THREE.RGBFormat,
+            THREE.RGBAFormat,
             THREE.UnsignedByteType,
             THREE.UVMapping,
             THREE.ClampToEdgeWrapping,
@@ -266,17 +300,18 @@ export default class extends Body {
 
         const material = new THREE.ShaderMaterial({
             uniforms: {
-                ...waterBumpMapShaderLib.uniforms,
+                ...waterNormalMapShaderLib.uniforms,
                 bufferMap: { type: "t", value: texture },
                 bufferMapLast: { type: "t", value: texture0 },
-                delta: { type: "f", value: 0 },
-                resistanceFactor: {type: "f", value: 0 },
-                waveSpeed: { type: "f", value: 60 / 1000 / 3 }, // Pixels per millisecond.
+                height: { type: "f", value: BOTTOM_HEIGHT },
+                k1: { type: "f", value: 0 },
+                k2: {type: "f", value: 0 },
+                k3: { type: "f", value: 0 },
             },
 
-            vertexShader: waterBumpMapShaderLib.vertexShader,
+            vertexShader: waterNormalMapShaderLib.vertexShader,
 
-            fragmentShader: waterBumpMapShaderLib.fragmentShader,
+            fragmentShader: waterNormalMapShaderLib.fragmentShader,
         });
 
         const plane = new THREE.Mesh(geometry, material);

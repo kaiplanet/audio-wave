@@ -64,6 +64,10 @@ export default class implements IAudioWaves {
         return mountPoint;
     }
 
+    public mountWaterTexture(mountPoint: HTMLElement) {
+        return this.water.mountTexture(mountPoint);
+    }
+
     public start() {
         this.active = true;
         this.water.startSimulation();

@@ -1,3 +1,5 @@
+uniform sampler2D normalMap;
+
 #define LAMBERT
 
 varying vec3 vLightFront;
@@ -23,12 +25,14 @@ varying vec3 vLightFront;
 #include <clipping_planes_pars_vertex>
 
 void main() {
-
 	#include <uv_vertex>
 	#include <uv2_vertex>
 	#include <color_vertex>
 
-	#include <beginnormal_vertex>
+	vec3 objectNormal = texture2D(normalMap, uv).rgb;
+//	vec3 objectNormal = vec3(-1.0, 1.0, 1.0);
+
+//	#include <beginnormal_vertex>
 	#include <morphnormal_vertex>
 	#include <skinbase_vertex>
 	#include <skinnormal_vertex>
@@ -46,5 +50,4 @@ void main() {
 	#include <lights_lambert_vertex>
 	#include <shadowmap_vertex>
 	#include <fog_vertex>
-
 }

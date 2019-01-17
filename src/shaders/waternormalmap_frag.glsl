@@ -30,9 +30,11 @@ void main() {
         sampleTexel[i] = texture2D(bufferMap, texelCoords);
     }
 
-    float offset = k1 * (sampleTexel[2].r + height) + k2 * (texture2D(bufferMapLast, vUv).r + height) +
-        k3 * ((sampleTexel[0].r + height) + (sampleTexel[1].r + height) +
-        (sampleTexel[3].r + height) + (sampleTexel[4].r + height));
+    float offset = k1 * (sampleTexel[2].a + height) + k2 * (texture2D(bufferMapLast, vUv).a + height) +
+        k3 * ((sampleTexel[0].a + height) + (sampleTexel[1].a + height) +
+        (sampleTexel[3].a + height) + (sampleTexel[4].a + height));
 
-    gl_FragColor = vec4(offset - height, 0.0, 0.0, 0.0);
+    vec3 normal = normalize(vec3(sampleTexel[1].a - sampleTexel[3].a, sampleTexel[0].a - sampleTexel[4].a, 2));
+
+    gl_FragColor = vec4(normal, offset - height);
 }
