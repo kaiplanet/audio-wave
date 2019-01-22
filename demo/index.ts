@@ -4,6 +4,7 @@ const audioWaves = new AudioWaves();
 
 audioWaves.init(window.innerWidth, window.innerHeight);
 audioWaves.mount(document.body);
+// audioWaves.mountWaterTexture(document.body);
 
 const toolBar = document.querySelector("#tool-bar");
 
@@ -21,5 +22,20 @@ toolBar.querySelector(".generate-wave").addEventListener("click", () => {
     const height = +(toolBar.querySelector(".height") as HTMLInputElement).value;
     const period = +(toolBar.querySelector(".period") as HTMLInputElement).value;
 
-    // audioWaves.generateWave();
+    const textureData = new Uint8ClampedArray(60 * 60 * 4).map((value, index) => {
+        if (index % 4 === 3) {
+            const distance = Math.sqrt(Math.pow(Math.abs(Math.floor(index / 4 / 60) - 30), 2)
+                + Math.pow(Math.abs(index / 4 % 60 - 30), 2));
+
+            if (distance <= 30) {
+                return 158 + 30 * Math.cos(Math.PI * distance / 30);
+            }
+
+            return 128;
+        }
+
+        return 0;
+    });
+
+    audioWaves.generateWave(new ImageData(textureData, 60, 60), { x: 0, y: 0 });
 });

@@ -29,8 +29,7 @@ void main() {
 	#include <uv2_vertex>
 	#include <color_vertex>
 
-	vec3 objectNormal = texture2D(normalMap, uv).rgb;
-//	vec3 objectNormal = vec3(-1.0, 1.0, 1.0);
+	vec3 objectNormal = texture2D(normalMap, uv).xyz;
 
 //	#include <beginnormal_vertex>
 	#include <morphnormal_vertex>

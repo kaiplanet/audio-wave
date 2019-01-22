@@ -1,11 +1,4 @@
 import * as THREE from "three";
-import { EffectComposer } from "three/examples/js/postprocessing/EffectComposer";
-import { RenderPass } from "three/examples/js/postprocessing/RenderPass";
-import { ShaderPass } from "three/examples/js/postprocessing/ShaderPass";
-import { CopyShader } from "three/examples/js/shaders/CopyShader";
-
-THREE.CopyShader = CopyShader;
-THREE.RenderPass = ShaderPass;
 
 import Body from "./Body";
 
@@ -27,13 +20,12 @@ const RESOLUTION = 512;
 export default class extends Body {
     private plane: THREE.Mesh;
     private active = false;
-    private bufferTarget: THREE.WebGLRenderTarget;
+    private bufferTargets: THREE.WebGLRenderTarget[];
+    private activeBufferTargetIndex: number;
     private bufferContext: WebGLRenderingContext;
     private bufferRenderer: THREE.WebGLRenderer;
-    private bufferComposer: EffectComposer;
     private bufferScene: THREE.Scene;
     private bufferSceneCamera: THREE.Camera;
-    private isSizeSet = false;
     private bufferMaterial: THREE.ShaderMaterial;
     private clock: THREE.Clock;
 
@@ -44,9 +36,7 @@ export default class extends Body {
     }
 
     public addTo(scene: THREE.scene, position: THREE.Vector3) {
-        super.addTo(scene, position);
-
-        return this;
+        return super.addTo(scene, position);
     }
 
     public startSimulation() {
@@ -72,29 +62,19 @@ export default class extends Body {
             this.bufferMaterial.uniforms.k1.value = k1;
             this.bufferMaterial.uniforms.k2.value = k2;
             this.bufferMaterial.uniforms.k3.value = k3;
+            this.bufferMaterial.uniforms.bufferMap.value = this.getBufferMap();
+            this.bufferMaterial.uniforms.bufferMapLast.value = this.getBufferMapLast();
 
-            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, this.bufferTarget);
-            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera);  // TODO：remove
-            // this.bufferComposer.render(delta);
+            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, this.getActiveBufferTarget());
 
-            // TODO: remove
-            const buffer = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 4);
+            // TODO: Currently need canvas to pass texture between scenes,
+            // remove from product env when better method found.
+            // if (process.env.NODE_ENV === "development") {
+            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera);
+            // }
 
-            this.bufferRenderer.readRenderTargetPixels(this.bufferTarget, 0, 0, TEXTURE_WITDH, TEXTURE_HEIGHT, buffer);
-            // this.bufferRenderer
-            //  .readRenderTargetPixels(this.bufferComposer.renderTarget2, 0, 0, TEXTURE_WITDH, TEXTURE_HEIGHT, buffer);
-
-            const texture1 = this.bufferMaterial.uniforms.bufferMapLast.value.clone();
-            const texture2 = this.bufferMaterial.uniforms.bufferMap.value.clone();
-
-            texture1.image.data = texture2.image.data;
-            texture1.needsUpdate = true;
-            texture2.image.data = buffer;
-            texture2.needsUpdate = true;
-
-            this.bufferMaterial.uniforms.bufferMapLast.value = texture1;
-            this.bufferMaterial.uniforms.bufferMap.value = texture2;
-            this.plane.material.uniforms.normalMap.value = texture2;
+            this.plane.material.uniforms.normalMap.value.needsUpdate = true;
+            this.swapActiveBufferTargets();
 
             if (this.active) {
                 requestAnimationFrame(tick);
@@ -122,41 +102,44 @@ export default class extends Body {
      *      The range of each component is from -1 to 1.
      */
     public generateWave(sourceTexture: ImageData, position: THREE.Vector2) {
-        const textureUnit = this.bufferRenderer.properties.get(this.bufferTarget.texture).__webglTexture;
+        const textureUnit = this.bufferRenderer.properties.get(this.getBufferMap()).__webglTexture;
 
         if (!textureUnit) {
             return;
         }
+
+        const buffer = new Uint8Array(sourceTexture.width * sourceTexture.height * 4);
+
+        this.bufferRenderer.readRenderTargetPixels(
+            this.bufferTargets[this.getBufferMapIndex()],
+            TEXTURE_WITDH / 2 + TEXTURE_WITDH / 2 * position.x - sourceTexture.width / 2,
+            TEXTURE_HEIGHT / 2 + TEXTURE_HEIGHT / 2 * position.y - sourceTexture.height / 2,
+            sourceTexture.width,
+            sourceTexture.height,
+            buffer,
+        );
 
         const ctx = this.bufferContext;
         const activeTextureUnit = ctx.getParameter(ctx.TEXTURE_BINDING_2D);
 
         ctx.bindTexture(ctx.TEXTURE_2D, textureUnit);
 
-        if (!this.isSizeSet) {
-            this.bufferContext.texImage2D(
-                ctx.TEXTURE_2D,
-                0,
-                ctx.RGB,
-                TEXTURE_WITDH,
-                TEXTURE_HEIGHT,
-                0,
-                ctx.RGB,
-                ctx.UNSIGNED_BYTE,
-                null,
-            );
+        const texture = new ImageData(Uint8ClampedArray.from(buffer).map((value, index) => {
+            if (index % 4 === 3) {
+                return value + sourceTexture.data[index] - 128;
+            }
 
-            this.isSizeSet = true;
-        }
+            return value;
+        }), sourceTexture.width, sourceTexture.height);
 
         ctx.texSubImage2D(
             ctx.TEXTURE_2D,
             0,
-            TEXTURE_WITDH / 2 + TEXTURE_WITDH / 2 * position.x,
-            TEXTURE_HEIGHT / 2 + TEXTURE_HEIGHT / 2 * position.y,
-            ctx.RGB,
+            TEXTURE_WITDH / 2 + TEXTURE_WITDH / 2 * position.x - sourceTexture.width / 2,
+            TEXTURE_HEIGHT / 2 + TEXTURE_HEIGHT / 2 * position.y - sourceTexture.height / 2,
+            ctx.RGBA,
             ctx.UNSIGNED_BYTE,
-            sourceTexture,
+            texture,
         );
 
         ctx.generateMipmap(ctx.TEXTURE_2D);
@@ -170,8 +153,11 @@ export default class extends Body {
     }
 
     protected init() {
+        this.activeBufferTargetIndex = 0;
+
         this.createPlane();
         this.initBufferScene();
+        this.plane.material.uniforms.normalMap.value = new THREE.CanvasTexture(this.bufferRenderer.domElement);
 
         return this;
     }
@@ -208,11 +194,14 @@ export default class extends Body {
     private initBufferScene(): this {
         this.bufferRenderer = new THREE.WebGLRenderer({ alpha: true });
         this.bufferRenderer.setSize(TEXTURE_WITDH, TEXTURE_HEIGHT);
-        this.bufferContext = this.bufferRenderer.context;
 
-        this.bufferTarget = new THREE.WebGLRenderTarget(TEXTURE_WITDH, TEXTURE_HEIGHT, {
-            format: THREE.RGBAFormat,
-        });
+        const ctx = this.bufferContext = this.bufferRenderer.context;
+
+        this.bufferTargets = new Array(3)
+            .fill(null)
+            .map(() => new THREE.WebGLRenderTarget(TEXTURE_WITDH, TEXTURE_HEIGHT, {
+                format: THREE.RGBAFormat,
+            }));
 
         this.bufferScene = new THREE.Scene();
 
@@ -227,41 +216,7 @@ export default class extends Body {
         const geometry = new THREE.PlaneGeometry(TEXTURE_WITDH, TEXTURE_HEIGHT, 1, 1);
 
         const textureData = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 4).map((el, index) => {
-            // TODO: remove
             if (index % 4 === 3) {
-                // TODO: remove
-                const distance = Math.sqrt(Math.pow(Math.abs(Math.floor(index / 4 / 512) - 256), 2)
-                    + Math.pow(Math.abs(index / 4 % 512 - 256), 2));
-
-                if (distance <= 30) {
-                    return 88 + 40 * Math.sin(Math.PI / 2 * distance / 30);
-                }
-
-                // if (Math.round(index / 4 / 512) === 256 && index / 4 % 512 === 256) {
-                //     return 110;
-                // }
-
-                return 128;
-            }
-
-            return 0;
-        });
-
-        const textureData0 = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 4).map((el, index) => {
-            // TODO: remove
-            if (index % 4 === 3) {
-                // TODO: remove
-                const distance = Math.sqrt(Math.pow(Math.abs(Math.floor(index / 4 / 512) - 256), 2)
-                    + Math.pow(Math.abs(index / 4 % 512 - 256), 2));
-
-                if (distance <= 30) {
-                    return 108 + 20 * Math.sin(Math.PI / 2 * distance / 30);
-                }
-
-                // if (Math.round(index / 4 / 512) === 256 && index / 4 % 512 === 256) {
-                //     return 110;
-                // }
-
                 return 128;
             }
 
@@ -283,30 +238,25 @@ export default class extends Body {
 
         texture.needsUpdate = true;
 
-        const texture0 = new THREE.DataTexture(
-            textureData0,
-            TEXTURE_WITDH,
-            TEXTURE_HEIGHT,
-            THREE.RGBAFormat,
-            THREE.UnsignedByteType,
-            THREE.UVMapping,
-            THREE.ClampToEdgeWrapping,
-            THREE.ClampToEdgeWrapping,
-            THREE.NearestFilter,
-            THREE.NearestFilter,
-        );
+        const textureClone = texture.clone();
+        textureClone.needsUpdate = true;
 
-        texture0.needsUpdate = true;
+        const delta = 1 / 60;
+        const f1 = WAVE_SPEED * WAVE_SPEED * delta * delta;
+        const f2 = 1 / (RESISTANCE_FACTOR * delta + 2);
+        const k1 = (4 - 8 * f1) * f2;
+        const k2 = (RESISTANCE_FACTOR * delta - 2) * f2;
+        const k3 = 2 * f1 * f2;
 
         const material = new THREE.ShaderMaterial({
             uniforms: {
                 ...waterNormalMapShaderLib.uniforms,
                 bufferMap: { type: "t", value: texture },
-                bufferMapLast: { type: "t", value: texture0 },
+                bufferMapLast: { type: "t", value: textureClone },
                 height: { type: "f", value: BOTTOM_HEIGHT },
-                k1: { type: "f", value: 0 },
-                k2: {type: "f", value: 0 },
-                k3: { type: "f", value: 0 },
+                k1: { type: "f", value: k1 },
+                k2: {type: "f", value: k2 },
+                k3: { type: "f", value: k3 },
             },
 
             vertexShader: waterNormalMapShaderLib.vertexShader,
@@ -314,23 +264,82 @@ export default class extends Body {
             fragmentShader: waterNormalMapShaderLib.fragmentShader,
         });
 
+        this.bufferMaterial = material;
+
         const plane = new THREE.Mesh(geometry, material);
 
         plane.position.set(0, 0, 0);
         plane.rotation.set(-Math.PI / 2, 0, 0);
-
         this.bufferScene.add(plane);
-        this.bufferMaterial = material;
 
-        // const renderPass = new RenderPass(this.bufferScene, this.bufferSceneCamera);
-        // const shaderPass = new ShaderPass(meanFilterShaderLib);
-        //
-        // shaderPass.renderToScreen = true; // TODO: remove
-        //
-        // this.bufferComposer = new EffectComposer(this.bufferRenderer, this.bufferTarget);
-        // this.bufferComposer.addPass(renderPass);
-        // this.bufferComposer.addPass(shaderPass);
+        this.bufferTargets.forEach((target: THREE.WebGLRenderTarget) => {
+            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, target);
+        });
+
+        const textureUnit = this.bufferRenderer.properties.get(this.getBufferMap()).__webglTexture;
+        const activeTextureUnit = ctx.getParameter(ctx.TEXTURE_BINDING_2D);
+
+        ctx.bindTexture(ctx.TEXTURE_2D, textureUnit);
+
+        ctx.texImage2D(
+            ctx.TEXTURE_2D,
+            0,
+            ctx.RGBA,
+            TEXTURE_WITDH,
+            TEXTURE_HEIGHT,
+            0,
+            ctx.RGBA,
+            ctx.UNSIGNED_BYTE,
+            null,
+        );
+
+        ctx.generateMipmap(ctx.TEXTURE_2D);
+        ctx.bindTexture(ctx.TEXTURE_2D, activeTextureUnit);
+
+        this.bufferTargets.forEach((target: THREE.WebGLRenderTarget) => {
+            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, target);
+        });
 
         return this;
+    }
+
+    private swapActiveBufferTargets() {
+        if (this.activeBufferTargetIndex === this.bufferTargets.length - 1) {
+            this.activeBufferTargetIndex = 0;
+        } else {
+            this.activeBufferTargetIndex += 1;
+        }
+
+        return this;
+    }
+
+    private getActiveBufferTarget() {
+        return this.bufferTargets[this.activeBufferTargetIndex];
+    }
+
+    private getBufferMapIndex() {
+        if (this.activeBufferTargetIndex === 0) {
+            return this.bufferTargets.length - 1;
+        }
+
+        return this.activeBufferTargetIndex - 1;
+    }
+
+    private getBufferMap() {
+        return this.bufferTargets[this.getBufferMapIndex()].texture;
+    }
+
+    private getBufferMapLast() {
+        const bufferMapLastIndex = (() => {
+            const bufferMapIndex = this.getBufferMapIndex();
+
+            if (bufferMapIndex === 0) {
+                return this.bufferTargets.length - 1;
+            }
+
+            return bufferMapIndex - 1;
+        })();
+
+        return this.bufferTargets[bufferMapLastIndex].texture;
     }
 }
