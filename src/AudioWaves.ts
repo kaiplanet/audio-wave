@@ -30,13 +30,13 @@ export default class implements IAudioWaves {
         }
 
         this.camera = new THREE.PerspectiveCamera(45, width / height, .1, 1000);
-        this.camera.position.set(0, 600, 600);
+        this.camera.position.set(0, 60, 430);
         this.camera.lookAt(this.scene.position);
 
         this.scene.add(new THREE.AmbientLight(0x404040));
 
         this.light = new THREE.DirectionalLight(0xffe6cc, 1.5);
-        this.light.position.set(100, 100, -100);
+        this.light.position.set(0, 2, -10);
         this.light.castShadow = true;
         this.light.shadow.camera.near = 0.5;
         this.light.shadow.camera.far = 500;

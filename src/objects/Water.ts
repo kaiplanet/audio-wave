@@ -329,17 +329,17 @@ export default class extends Body {
         return this.bufferTargets[this.getBufferMapIndex()].texture;
     }
 
+    private getBufferMapLastIndex() {
+        const bufferMapIndex = this.getBufferMapIndex();
+
+        if (bufferMapIndex === 0) {
+            return this.bufferTargets.length - 1;
+        }
+
+        return bufferMapIndex - 1;
+    }
+
     private getBufferMapLast() {
-        const bufferMapLastIndex = (() => {
-            const bufferMapIndex = this.getBufferMapIndex();
-
-            if (bufferMapIndex === 0) {
-                return this.bufferTargets.length - 1;
-            }
-
-            return bufferMapIndex - 1;
-        })();
-
-        return this.bufferTargets[bufferMapLastIndex].texture;
+        return this.bufferTargets[this.getBufferMapLastIndex()].texture;
     }
 }

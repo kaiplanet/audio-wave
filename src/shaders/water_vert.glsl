@@ -24,6 +24,8 @@ varying vec3 vLightFront;
 #include <logdepthbuf_pars_vertex>
 #include <clipping_planes_pars_vertex>
 
+const float mirrorFactor = 250.0;
+
 void main() {
 	#include <uv_vertex>
 	#include <uv2_vertex>
@@ -47,6 +49,19 @@ void main() {
 	#include <worldpos_vertex>
 	#include <envmap_vertex>
 	#include <lights_lambert_vertex>
+
+    vec3 reflectDirection = reflect(-directionalLights[0].direction, geometry.normal);
+    float reflectStrength;
+
+    if (dotNL > 0.0) {
+        reflectStrength =
+            pow(max(dot(reflectDirection, normalize(cameraPosition - position)), 0.0), mirrorFactor) * 5.0;
+    } else {
+        reflectStrength = 0.0;
+    }
+
+    vLightFront *= reflectStrength;
+
 	#include <shadowmap_vertex>
 	#include <fog_vertex>
 }

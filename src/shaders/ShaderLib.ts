@@ -1,7 +1,6 @@
 import * as THREE from "three";
 
 import { ShaderChunk } from "three/src/renderers/shaders/ShaderChunk";
-import { ShaderLib } from "three/src/renderers/shaders/ShaderLib";
 import { UniformsLib } from "three/src/renderers/shaders/UniformsLib";
 import { UniformsUtils } from "three/src/renderers/shaders/UniformsUtils";
 
