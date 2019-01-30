@@ -54,13 +54,15 @@ void main() {
     float reflectStrength;
 
     if (dotNL > 0.0) {
-        reflectStrength =
-            pow(max(dot(reflectDirection, normalize(cameraPosition - position)), 0.0), mirrorFactor) * 5.0;
+        reflectStrength = pow(max(dot(reflectDirection, normalize(cameraPosition - position)), 0.0), mirrorFactor);
     } else {
         reflectStrength = 0.0;
     }
 
-    vLightFront *= reflectStrength;
+    vec3 vLightFrontDiffuse = vLightFront * .05;
+    vec3 vLightFrontMirror = vLightFront * .95;
+
+    vLightFront = vLightFrontDiffuse + vLightFrontMirror * reflectStrength;
 
 	#include <shadowmap_vertex>
 	#include <fog_vertex>

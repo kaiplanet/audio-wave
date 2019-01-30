@@ -4,9 +4,9 @@ import Body from "./Body";
 
 import { waterNormalMapShaderLib, waterShaderLib } from "../shaders/ShaderLib";
 
-const WAVE_SPEED = 60 * .707731533050537209295072216; // Pixel per millisecond.
-const RESISTANCE_FACTOR = 0;
-const BOTTOM_HEIGHT = 5500;
+const WAVE_SPEED = 60 * .637731533050537209295072216; // Pixel per millisecond.
+const RESISTANCE_FACTOR = 0.01;
+const BOTTOM_HEIGHT = 6000;
 
 const TEXTURE_WITDH = 512;
 const TEXTURE_HEIGHT = 512;
@@ -177,8 +177,6 @@ export default class extends Body {
 
             lights: true,
         });
-
-        // const material = new THREE.MeshLambertMaterial(); // TODO: remove later
 
         const plane = new THREE.Mesh(geometry, material);
 

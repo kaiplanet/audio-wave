@@ -37,5 +37,5 @@ toolBar.querySelector(".generate-wave").addEventListener("click", () => {
         return 0;
     });
 
-    audioWaves.generateWave(new ImageData(textureData, 61, 61), { x: 0, y: 0 });
+    audioWaves.generateWave(new ImageData(textureData, 61, 61), { x: 0, y: -.5 });
 });
