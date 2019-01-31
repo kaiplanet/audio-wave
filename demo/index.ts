@@ -16,11 +16,17 @@ toolBar.querySelector(".stop").addEventListener("click", () => {
     audioWaves.stop();
 });
 
+toolBar.querySelector(".switch-to-day").addEventListener("click", () => {
+    audioWaves.switchToDay();
+});
+
+toolBar.querySelector(".switch-to-night").addEventListener("click", () => {
+    audioWaves.switchToNight();
+});
+
 toolBar.querySelector(".generate-wave").addEventListener("click", () => {
     const x = +(toolBar.querySelector(".x") as HTMLInputElement).value;
     const y = +(toolBar.querySelector(".y") as HTMLInputElement).value;
-    const height = +(toolBar.querySelector(".height") as HTMLInputElement).value;
-    const period = +(toolBar.querySelector(".period") as HTMLInputElement).value;
 
     const textureData = new Uint8ClampedArray(61 * 61 * 4).map((value, index) => {
         if (index % 4 === 3) {
