@@ -37,6 +37,11 @@ module.exports = {
             {
                 test: /\.glsl$/,
                 loader: 'raw-loader'
+            },
+            {
+                test: /\.jpg$/,
+                exclude: /node_modules/,
+                loader: 'url-loader?limit=8192'
             }
         ]
     },
@@ -50,6 +55,6 @@ module.exports = {
         new ThreeWebpackPlugin()
     ],
     resolve: {
-        extensions: [ '.ts', '.glsl', '.js' ]
+        extensions: [ '.ts', '.glsl', '.js', '.jpg' ]
     }
 };

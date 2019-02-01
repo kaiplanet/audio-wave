@@ -5,6 +5,8 @@ import Water from "./objects/Water";
 
 import { animate } from "./utils";
 
+import * as assets from "./assets/assets";
+
 interface IAudioWaves {
     init(width: number, height: number): this;
     mount(mountPoint: HTMLElement): HTMLElement;
@@ -42,6 +44,14 @@ export default class implements IAudioWaves {
         if (process.env.NODE_ENV === "development") {
             this.scene.add(new THREE.AxesHelper(20));
         }
+
+        const loader = new THREE.CubeTextureLoader();
+
+        this.scene.background = loader.load([
+            assets.BACKGROUND_PX, assets.BACKGROUND_NX,
+            assets.BACKGROUND_PY, assets.BACKGROUND_NY,
+            assets.BACKGROUND_PZ, assets.BACKGROUND_NZ,
+        ]);
 
         this.camera = new THREE.PerspectiveCamera(45, width / height, .1, 1000);
         this.camera.position.set(0, 60, 430);
