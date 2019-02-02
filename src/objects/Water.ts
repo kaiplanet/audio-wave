@@ -16,8 +16,11 @@ const EXTERNAL_COORDS_ORIGIN_Y = TEXTURE_HEIGHT / 2;
 const WIDTH = 600;
 const HEIGHT = 600;
 const RESOLUTION = 512;
+const PLANE_NORMAL = new THREE.Vector3(0, 1, 0);
 
 export default class extends Body {
+    private renderer: THREE.WebGLRenderer;
+    private cameara: THREE.Camera;
     private plane: THREE.Mesh;
     private active = false;
     private bufferTargets: THREE.WebGLRenderTarget[];
@@ -27,15 +30,36 @@ export default class extends Body {
     private bufferScene: THREE.Scene;
     private bufferSceneCamera: THREE.Camera;
     private bufferMaterial: THREE.ShaderMaterial;
+    private mirrorScene: THREE.Scene;
+    private mirrorTarget: THREE.WebGLRenderTarget;
+    private mirrorCamera: THREE.Camera;
+    private readonly reflectMatrix: THREE.Matrix4;
+    private readonly mirrorTextureMatrix: THREE.Matrix4;
     private clock: THREE.Clock;
 
-    constructor() {
-        super();
+    constructor(renderer: THREE.WebGLRenderer) {
+        super(renderer);
 
-        this.clock = new THREE.Clock();
+        this.reflectMatrix = new THREE.Matrix4();
+        this.mirrorTextureMatrix = new THREE.Matrix4();
+        this.init(renderer);
     }
 
-    public addTo(scene: THREE.scene, position: THREE.Vector3) {
+    public addTo(scene: THREE.Scene, position: THREE.Vector3, camera: THREE.Camera) {
+        this.mirrorScene = scene;
+        this.cameara = camera;
+        this.mirrorCamera = camera.clone();
+
+        const distanceToOrigin = position.y;
+        const n = PLANE_NORMAL;
+
+        this.reflectMatrix.set(
+            1 - 2 * n.x * n.x, -2 * n.x * n.y, -2 * n.x * n.z, -2 * distanceToOrigin * n.x,
+            -2 * n.x * n.y, 1 - 2 * n.y * n.y, -2 * n.y * n.z, -2 * distanceToOrigin * n.y,
+            -2 * n.x * n.z, -2 * n.y * n.z, 1 - 2 * n.z * n.z, -2 * distanceToOrigin * n.z,
+            0, 0, 0, 1,
+        );
+
         return super.addTo(scene, position);
     }
 
@@ -44,14 +68,11 @@ export default class extends Body {
             return;
         }
 
-        const tick = () => {
+        const waveSimulationTick = (clockDelta) => {
             const MAX_DELTA = 1 / 60;
 
-            let delta = this.clock.getDelta();
-
-            // if (delta > MAX_DELTA) {
-            delta = MAX_DELTA;
-            // }
+            // const delta = clockDelta > MAX_DELTA ? MAX_DELTA : clockDelta;
+            const delta = MAX_DELTA;
 
             const f1 = WAVE_SPEED * WAVE_SPEED * delta * delta;
             const f2 = 1 / (RESISTANCE_FACTOR * delta + 2);
@@ -75,10 +96,15 @@ export default class extends Body {
 
             this.plane.material.uniforms.normalMap.value.needsUpdate = true;
             this.swapActiveBufferTargets();
+        };
+
+        const tick = () => {
+            const delta = this.clock.getDelta();
+
+            waveSimulationTick(delta);
 
             if (this.active) {
                 requestAnimationFrame(tick);
-                // setTimeout(tick, 500);
             }
         };
 
@@ -146,18 +172,27 @@ export default class extends Body {
         ctx.bindTexture(ctx.TEXTURE_2D, activeTextureUnit);
     }
 
+    // TODO: remove later
     public mountTexture(mountPoint: HTMLElement) {
         mountPoint.appendChild(this.bufferRenderer.domElement);
 
         return mountPoint;
     }
 
-    protected init() {
+    protected init(renderer: THREE.WebGLRenderer) {
+        this.renderer = renderer;
         this.activeBufferTargetIndex = 0;
+
+        const ctx = this.renderer.context;
+
+        this.mirrorTarget = new THREE.WebGLRenderTarget(ctx.drawingBufferWidth, ctx.drawingBufferHeight, {
+            format: THREE.RGBAFormat,
+        });
 
         this.createPlane();
         this.initBufferScene();
         this.plane.material.uniforms.normalMap.value = new THREE.CanvasTexture(this.bufferRenderer.domElement);
+        this.clock = new THREE.Clock();
 
         return this;
     }
@@ -168,7 +203,9 @@ export default class extends Body {
         const material = new THREE.ShaderMaterial({
             uniforms: {
                 ...waterShaderLib.uniforms,
+                map: { type: "t", value: this.mirrorTarget.texture },
                 normalMap: { type: "t", value: null },
+                textureMatrix: { type: "m4", value: this.mirrorTextureMatrix },
             },
 
             vertexShader: waterShaderLib.vertexShader,
@@ -182,6 +219,41 @@ export default class extends Body {
 
         plane.rotation.set(Math.PI / -2, 0, 0);
         plane.receiveShadow = true;
+
+        plane.onBeforeRender = () => {
+            if (this.mirrorScene && this.mirrorCamera && this.mirrorTarget) {
+                plane.visible = false;
+                this.mirrorCamera.position.copy(this.cameara);
+                this.mirrorCamera.applyMatrix(this.reflectMatrix);
+
+                // Update the texture matrix
+                this.mirrorTextureMatrix.set(
+                    0.5, 0.0, 0.0, 0.5,
+                    0.0, 0.5, 0.0, 0.5,
+                    0.0, 0.0, 0.5, 0.5,
+                    0.0, 0.0, 0.0, 1.0,
+                );
+
+                this.mirrorTextureMatrix.multiply(this.mirrorCamera.projectionMatrix);
+                this.mirrorTextureMatrix.multiply(this.mirrorCamera.matrixWorldInverse);
+                this.mirrorTextureMatrix.multiply(this.plane.matrixWorld);
+
+                const currentRenderTarget = this.renderer.getRenderTarget();
+                const  currentVrEnabled = this.renderer.vr.enabled;
+                const  currentShadowAutoUpdate = this.renderer.shadowMap.autoUpdate;
+
+                this.renderer.vr.enabled = false; // Avoid camera modification and recursion
+                this.renderer.shadowMap.autoUpdate = false; // Avoid re-computing shadows
+
+                this.renderer.render(this.mirrorScene, this.mirrorCamera, this.mirrorTarget, true);
+
+                this.renderer.vr.enabled = currentVrEnabled;
+                this.renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
+                this.renderer.setRenderTarget(currentRenderTarget);
+
+                plane.visible = true;
+            }
+        };
 
         this.plane = plane;
         this.objects.push(plane);

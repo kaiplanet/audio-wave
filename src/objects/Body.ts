@@ -3,11 +3,9 @@ import * as THREE from "three";
 export default abstract class {
     protected objects: THREE.Object3D[] = [];
 
-    protected constructor() {
-        this.init();
-    }
+    protected constructor(...params: any) { }
 
-    public addTo(scene: THREE.Scene, position: THREE.Vector3): this {
+    public addTo(scene: THREE.Scene, position: THREE.Vector3, ...params: any): this {
         this.objects.forEach((object) => {
             object.position.set(position.x, position.y, position.z);
             scene.add(object);
@@ -19,5 +17,5 @@ export default abstract class {
     public abstract startSimulation(): this;
     public abstract stopSimulation(): this;
 
-    protected abstract init(): this;
+    protected abstract init(...params: any): this;
 }

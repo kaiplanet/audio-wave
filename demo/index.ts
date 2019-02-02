@@ -4,7 +4,7 @@ const audioWaves = new AudioWaves();
 
 audioWaves.init(window.innerWidth, window.innerHeight);
 audioWaves.mount(document.body);
-// audioWaves.mountWaterTexture(document.body);
+// audioWaves.mountWaterTexture(document.body); // TODO: remove later
 
 const toolBar = document.querySelector("#tool-bar");
 

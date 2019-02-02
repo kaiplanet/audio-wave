@@ -62,9 +62,9 @@ export default class implements IAudioWaves {
         this.initSunLight(SUN_RISE_DIRECTION);
         this.initMoonLight(MOON_DIRECTION);
 
-        const water = new Water();
+        const water = new Water(this.renderer);
 
-        water.addTo(this.scene, new THREE.Vector3(0, 0, 0));
+        water.addTo(this.scene, new THREE.Vector3(0, 0, 0), this.camera);
         this.water = water;
 
         return this;
@@ -76,6 +76,7 @@ export default class implements IAudioWaves {
         return mountPoint;
     }
 
+    // TODO: remove later
     public mountWaterTexture(mountPoint: HTMLElement) {
         return this.water.mountTexture(mountPoint);
     }
@@ -125,7 +126,7 @@ export default class implements IAudioWaves {
     }
 
     private initSunLight(direction: THREE.Vector3): this {
-        this.sunLight = new THREE.DirectionalLight(0xffe6cc, 1.5);
+        this.sunLight = new THREE.DirectionalLight(0xffe6cc, 20);
         this.sunLight.position.set(direction.x, direction.y, direction.z);
         this.sunLight.castShadow = true;
         this.sunLight.shadow.camera.near = 0.5;
@@ -164,26 +165,26 @@ export default class implements IAudioWaves {
 
     private riseSun(): this {
         this.sunLight.position.set(SUN_RISE_DIRECTION.x, SUN_RISE_DIRECTION.y, SUN_RISE_DIRECTION.z);
-        animate(this.sunLight.position, SUN_DIRECTION, 2, Power1.easeOut);
+        animate(this.sunLight.position, SUN_DIRECTION, 2, { delay: 1, ease: Power1.easeOut });
 
         return this;
     }
 
     private setSun(): this {
-        animate(this.sunLight.position, SUN_SET_DIRECTION, 4, Power1.easeIn);
+        animate(this.sunLight.position, SUN_SET_DIRECTION, 4, { ease: Power1.easeIn });
 
         return this;
     }
 
     private riseMoon(): this {
         this.moonLight.position.set(MOON_RISE_DIRECTION.x, MOON_RISE_DIRECTION.y, MOON_RISE_DIRECTION.z);
-        animate(this.moonLight.position, MOON_DIRECTION, 3, Power1.easeOut);
+        animate(this.moonLight.position, MOON_DIRECTION, 3, { delay: 2, ease: Power1.easeOut });
 
         return this;
     }
 
     private setMoon(): this {
-        animate(this.moonLight.position, MOON_SET_DIRECTION, 3, Power1.easeIn);
+        animate(this.moonLight.position, MOON_SET_DIRECTION, 3, { ease: Power1.easeIn });
 
         return this;
     }
