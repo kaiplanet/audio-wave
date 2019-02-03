@@ -1,9 +1,6 @@
-import { Power1 } from "gsap/all";
 import * as THREE from "three";
 
 import Body from "../Body";
-
-import {animate} from "../../utils";
 
 export default abstract class extends Body {
     protected light: THREE.Light;
@@ -25,22 +22,8 @@ export default abstract class extends Body {
         this.light.position.set(lightDirection.x, lightDirection.y, lightDirection.z);
     }
 
-    public rise() {
-        if (this.light) {
-            this.light.position.set(this.riseDirection.x, this.riseDirection.y, this.riseDirection.z);
-            animate(this.light.position, this.originDirection, 3, { delay: 2, ease: Power1.easeOut });
-        }
-
-        return this;
-    }
-
-    public set() {
-        if (this.light) {
-            animate(this.light.position, this.setDirection, 3, { ease: Power1.easeIn });
-        }
-
-        return this;
-    }
+    public abstract rise();
+    public abstract set();
 
     public startSimulation() {
         return this;

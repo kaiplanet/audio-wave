@@ -1,8 +1,9 @@
 import { TweenLite } from "gsap/all";
 import * as THREE from "three";
 
-function animate(target: THREE.Vector3, vars: THREE.Vector3, duration: number, options: object);
-function animate(target: any, vars: any, duration: number, options: object) {
+function animate(target: THREE.Vector3, vars: THREE.Vector3, duration: number, options?: object);
+function animate(target: object, vars: object, duration: number, options?: object);
+function animate(target: any, vars: any, duration: number, options?: object) {
     if (target instanceof THREE.Vector3) {
         const direction = {
             x: target.x,
@@ -20,6 +21,12 @@ function animate(target: any, vars: any, duration: number, options: object) {
                 target.setY(direction.y);
                 target.setZ(direction.z);
             },
+
+            ...options,
+        });
+    } else if (typeof target === "object") {
+        TweenLite.to(target, duration, {
+            ...vars,
             ...options,
         });
     }

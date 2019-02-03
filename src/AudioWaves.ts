@@ -16,6 +16,7 @@ interface IAudioWaves {
     stop(): this;
     generateWave(sourceTexture: ImageData, position: { x: number, y: number }): this;
     switchToDay(): this;
+    switchToNight(): this;
 }
 
 const SUN_DIRECTION = new THREE.Vector3(-1, 1, -5);
@@ -31,6 +32,7 @@ export default class implements IAudioWaves {
     private camera: THREE.PerspectiveCamera;
     private sun: Sun;
     private moon: Moon;
+    private hemisphereLight: THREE.HemisphereLight;
     private active: boolean;
 
     private water: Water;
@@ -59,7 +61,8 @@ export default class implements IAudioWaves {
         this.camera.position.set(0, 60, 430);
         this.camera.lookAt(this.scene.position);
 
-        this.scene.add(new THREE.AmbientLight(0x404040));
+        this.hemisphereLight = new THREE.HemisphereLight( 0xfff2e4, 0x080820, .2);
+        this.scene.add(this.hemisphereLight);
 
         this.sun = new Sun(SUN_DIRECTION, SUN_RISE_DIRECTION, SUN_SET_DIRECTION);
         this.sun.setPosition(SUN_RISE_DIRECTION);
@@ -117,6 +120,7 @@ export default class implements IAudioWaves {
     public switchToDay() {
         this.sun.rise();
         this.moon.set();
+        animate(this.hemisphereLight, { intensity: 1 }, 2, { delay: 1, ease: Power1.easeOut });
 
         return this;
     }
@@ -124,6 +128,7 @@ export default class implements IAudioWaves {
     public switchToNight() {
         this.sun.set();
         this.moon.rise();
+        animate(this.hemisphereLight, { intensity: .2 }, 4, { ease: Power1.easeIn });
 
         return this;
     }

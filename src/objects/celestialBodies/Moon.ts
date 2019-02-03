@@ -1,12 +1,32 @@
+import { Power1 } from "gsap/all";
 import * as THREE from "three";
 
 import CelestialBody from "./CelestialBody";
+
+import { animate } from "../../utils";
 
 export default class extends CelestialBody {
     constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3) {
         super(position, risePosition, setPosition);
 
         this.init();
+    }
+
+    public rise() {
+        if (this.light) {
+            this.light.position.set(this.riseDirection.x, this.riseDirection.y, this.riseDirection.z);
+            animate(this.light.position, this.originDirection, 3, { delay: 2, ease: Power1.easeOut });
+        }
+
+        return this;
+    }
+
+    public set() {
+        if (this.light) {
+            animate(this.light.position, this.setDirection, 3, { ease: Power1.easeIn });
+        }
+
+        return this;
     }
 
     protected init() {
