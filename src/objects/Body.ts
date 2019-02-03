@@ -5,9 +5,12 @@ export default abstract class {
 
     protected constructor(...params: any) { }
 
-    public addTo(scene: THREE.Scene, position: THREE.Vector3, ...params: any): this {
+    public addTo(scene: THREE.Scene, position?: THREE.Vector3, ...params: any): this {
         this.objects.forEach((object) => {
-            object.position.set(position.x, position.y, position.z);
+            if (position) {
+                object.position.set(position.x, position.y, position.z);
+            }
+
             scene.add(object);
         });
 
