@@ -3,8 +3,8 @@ import * as THREE from "three";
 import { UniformsLib } from "three/src/renderers/shaders/UniformsLib";
 import { UniformsUtils } from "three/src/renderers/shaders/UniformsUtils";
 
-import { meanfilter_frag, meanfilter_vert, water_frag, water_vert, waterbumpmap_frag, waterbumpmap_vert,
-    waternormalmap_frag, waternormalmap_vert } from "./ShaderChunk";
+import { background_frag, background_vert, meanfilter_frag, meanfilter_vert, water_frag, water_vert, waterbumpmap_frag,
+    waterbumpmap_vert, waternormalmap_frag, waternormalmap_vert } from "./ShaderChunk";
 
 interface IShaderLib {
     uniforms: object;
@@ -41,6 +41,21 @@ const waterNormalMapShaderLib: IShaderLib = {
   fragmentShader: waternormalmap_frag,
 };
 
+const backgroundShaderLib: IShaderLib = {
+    uniforms: UniformsUtils.merge([
+        UniformsLib.common,
+        UniformsLib.specularmap,
+        UniformsLib.envmap,
+        UniformsLib.aomap,
+        UniformsLib.lightmap,
+        UniformsLib.fog,
+    ]),
+
+    vertexShader: background_vert,
+
+    fragmentShader: background_frag,
+};
+
 const waterBumpMapShaderLib: IShaderLib = {
     uniforms: { },
 
@@ -59,4 +74,4 @@ const meanFilterShaderLib: IShaderLib = {
     fragmentShader: meanfilter_frag,
 };
 
-export { meanFilterShaderLib, waterShaderLib, waterBumpMapShaderLib, waterNormalMapShaderLib };
+export { backgroundShaderLib, meanFilterShaderLib, waterShaderLib, waterBumpMapShaderLib, waterNormalMapShaderLib };

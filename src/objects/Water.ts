@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-import Body from "./Body";
+import Object from "./Object";
 
 import { waterNormalMapShaderLib, waterShaderLib } from "../shaders/ShaderLib";
 
@@ -18,7 +18,7 @@ const HEIGHT = 600;
 const RESOLUTION = 512;
 const PLANE_NORMAL = new THREE.Vector3(0, 1, 0);
 
-export default class extends Body {
+export default class extends Object {
     private renderer: THREE.WebGLRenderer;
     private cameara: THREE.Camera;
     private plane: THREE.Mesh;
@@ -38,7 +38,7 @@ export default class extends Body {
     private clock: THREE.Clock;
 
     constructor(renderer: THREE.WebGLRenderer) {
-        super(renderer);
+        super();
 
         this.reflectMatrix = new THREE.Matrix4();
         this.mirrorTextureMatrix = new THREE.Matrix4();

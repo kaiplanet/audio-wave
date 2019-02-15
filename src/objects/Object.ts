@@ -3,7 +3,7 @@ import * as THREE from "three";
 export default abstract class {
     protected objects: THREE.Object3D[] = [];
 
-    protected constructor(...params: any) { }
+    protected constructor() { }
 
     public addTo(scene: THREE.Scene, position?: THREE.Vector3, ...params: any): this {
         this.objects.forEach((object) => {

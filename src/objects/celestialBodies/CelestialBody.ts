@@ -1,8 +1,8 @@
 import * as THREE from "three";
 
-import Body from "../Body";
+import Object from "../Object";
 
-export default abstract class extends Body {
+export default abstract class extends Object {
     protected light: THREE.Light;
     protected originDirection: THREE.Vector3;
     protected riseDirection: THREE.Vector3;

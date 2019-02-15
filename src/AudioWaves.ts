@@ -1,13 +1,12 @@
 import { Power1 } from "gsap/all";
 import * as THREE from "three";
 
+import Background from "./objects/Background";
 import Moon from "./objects/celestialBodies/Moon";
 import Sun from "./objects/celestialBodies/Sun";
 import Water from "./objects/Water";
 
 import { animate } from "./utils";
-
-import * as assets from "./assets/assets";
 
 interface IAudioWaves {
     init(width: number, height: number): this;
@@ -19,6 +18,7 @@ interface IAudioWaves {
     switchToNight(): this;
 }
 
+const NIGHT_BRIGHTNESS = .2;
 const SUN_DIRECTION = new THREE.Vector3(-1, 1, -5);
 const SUN_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
 const SUN_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
@@ -30,6 +30,7 @@ export default class implements IAudioWaves {
     private renderer: THREE.WebGLRenderer;
     private scene: THREE.Scene;
     private camera: THREE.PerspectiveCamera;
+    private background: Background;
     private sun: Sun;
     private moon: Moon;
     private hemisphereLight: THREE.HemisphereLight;
@@ -49,20 +50,16 @@ export default class implements IAudioWaves {
             this.scene.add(new THREE.AxesHelper(20));
         }
 
-        const loader = new THREE.CubeTextureLoader();
-
-        this.scene.background = loader.load([
-            assets.BACKGROUND_PX, assets.BACKGROUND_NX,
-            assets.BACKGROUND_PY, assets.BACKGROUND_NY,
-            assets.BACKGROUND_PZ, assets.BACKGROUND_NZ,
-        ]);
-
         this.camera = new THREE.PerspectiveCamera(45, width / height, .1, 1000);
         this.camera.position.set(0, 60, 430);
         this.camera.lookAt(this.scene.position);
 
         this.hemisphereLight = new THREE.HemisphereLight( 0xfff2e4, 0x080820, .2);
         this.scene.add(this.hemisphereLight);
+
+        this.background = new Background(this.renderer, { brightness: NIGHT_BRIGHTNESS });
+        this.background.addTo(this.scene);
+        this.background.load();
 
         this.sun = new Sun(SUN_DIRECTION, SUN_RISE_DIRECTION, SUN_SET_DIRECTION);
         this.sun.setPosition(SUN_RISE_DIRECTION);
@@ -118,6 +115,7 @@ export default class implements IAudioWaves {
     }
 
     public switchToDay() {
+        animate(this.background, { brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
         this.sun.rise();
         this.moon.set();
         animate(this.hemisphereLight, { intensity: 1 }, 2, { delay: 1, ease: Power1.easeOut });
@@ -126,9 +124,10 @@ export default class implements IAudioWaves {
     }
 
     public switchToNight() {
+        animate(this.background, { brightness: NIGHT_BRIGHTNESS }, 2, { delay: 1, ease: Power1.easeOut });
         this.sun.set();
         this.moon.rise();
-        animate(this.hemisphereLight, { intensity: .2 }, 4, { ease: Power1.easeIn });
+        animate(this.hemisphereLight, { intensity: NIGHT_BRIGHTNESS }, 4, { ease: Power1.easeIn });
 
         return this;
     }

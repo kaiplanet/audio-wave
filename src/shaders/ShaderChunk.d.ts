@@ -1,3 +1,5 @@
+export const background_frag: string;
+export const background_vert: string;
 export const meanfilter_frag: string;
 export const meanfilter_vert: string;
 export const water_vert: string;
