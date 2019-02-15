@@ -3,6 +3,7 @@
 uniform vec3 diffuse;
 uniform vec3 emissive;
 uniform float opacity;
+uniform vec3 waterDiffuse;
 
 varying vec3 vLightFront;
 
@@ -12,7 +13,7 @@ varying vec3 vLightFront;
 
 #endif
 
-varying vec4 vPosition;
+varying float fresnelFactor;
 
 #include <common>
 #include <packing>
@@ -54,7 +55,7 @@ void main() {
 
     #ifdef USE_MAP
 
-    	vec4 texelColor = texture2DProj(map, vUv);
+    	vec4 texelColor = texture2DProj(map, vUv) * fresnelFactor + vec4(waterDiffuse, 1.0) * (1.0 - fresnelFactor);
 
     	texelColor = mapTexelToLinear(texelColor);
     	diffuseColor *= texelColor;
@@ -68,15 +69,15 @@ void main() {
 	#include <emissivemap_fragment>
 
 	// accumulation
-	reflectedLight.indirectDiffuse = getAmbientLightIrradiance( ambientLightColor );
+	reflectedLight.indirectDiffuse = getAmbientLightIrradiance(ambientLightColor);
 
 	#include <lightmap_fragment>
 
-	reflectedLight.indirectDiffuse *= BRDF_Diffuse_Lambert( diffuseColor.rgb );
+	reflectedLight.indirectDiffuse *= BRDF_Diffuse_Lambert(diffuseColor.rgb);
 
 	#ifdef DOUBLE_SIDED
 
-		reflectedLight.directDiffuse = ( gl_FrontFacing ) ? vLightFront : vLightBack;
+		reflectedLight.directDiffuse = (gl_FrontFacing) ? vLightFront : vLightBack;
 
 	#else
 
@@ -93,7 +94,7 @@ void main() {
 
 	#include <envmap_fragment>
 
-	gl_FragColor = vec4( outgoingLight, diffuseColor.a );
+	gl_FragColor = vec4(outgoingLight, diffuseColor.a);
 
 	#include <tonemapping_fragment>
 	#include <encodings_fragment>

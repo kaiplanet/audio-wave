@@ -3,6 +3,7 @@
 
 uniform sampler2D normalMap;
 uniform mat4 textureMatrix;
+uniform float eta;
 
 varying vec3 vLightFront;
 
@@ -11,6 +12,8 @@ varying vec3 vLightFront;
 	varying vec3 vLightBack;
 
 #endif
+
+varying float fresnelFactor;
 
 #include <common>
 //#include <uv_pars_vertex>
@@ -47,6 +50,15 @@ void main() {
 
     vUv = textureMatrix * vec4(position, 1.0)
         + vec4(objectNormal.x  / objectNormal.z * sceneHeight, objectNormal.y / objectNormal.z * sceneHeight, 0.0, 0.0);
+
+    vec3 incidentLightDirection = reflect(position - cameraPosition, objectNormal);
+    float texDotNL = dot(normalize(incidentLightDirection), normalize(objectNormal));
+    float g = sqrt(pow(eta, 2.0) - 1.0 + pow(texDotNL, 2.0));
+    float f1 = g - texDotNL;
+    float f2 = g + texDotNL;
+
+    fresnelFactor = 0.5 * pow(f1, 2.0) / pow(f2, 2.0)
+        * (pow(texDotNL * f2 - 1.0, 2.0) / pow(texDotNL * f1 + 1.0, 2.0) + 1.0);
 
 //	#include <beginnormal_vertex>
 	#include <morphnormal_vertex>
@@ -113,6 +125,23 @@ void main() {
 
             vLightFront += vLightFrontDiffuse + vLightFrontMirror * reflectStrength;
         }
+
+    #endif
+
+    #if NUM_HEMI_LIGHTS > 0
+
+    	#pragma unroll_loop
+    	for ( int i = 0; i < NUM_HEMI_LIGHTS; i ++ ) {
+
+    		vLightFront += getHemisphereLightIrradiance( hemisphereLights[ i ], geometry );
+
+    		#ifdef DOUBLE_SIDED
+
+    			vLightBack += getHemisphereLightIrradiance( hemisphereLights[ i ], backGeometry );
+
+    		#endif
+
+    	}
 
     #endif
 

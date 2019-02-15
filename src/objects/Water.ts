@@ -17,6 +17,7 @@ const WIDTH = 600;
 const HEIGHT = 600;
 const RESOLUTION = 512;
 const PLANE_NORMAL = new THREE.Vector3(0, 1, 0);
+const FRESNEL_REFLECTION_RATE = .5;
 
 export default class extends Object {
     private renderer: THREE.WebGLRenderer;
@@ -200,12 +201,16 @@ export default class extends Object {
     private createPlane(): THREE.Mesh {
         const geometry = new THREE.PlaneGeometry(WIDTH, HEIGHT, RESOLUTION, RESOLUTION);
 
+        const eta = (1 + Math.sqrt(FRESNEL_REFLECTION_RATE)) / (1 - Math.sqrt(FRESNEL_REFLECTION_RATE));
+
         const material = new THREE.ShaderMaterial({
             uniforms: {
                 ...waterShaderLib.uniforms,
+                eta: { type: "f", value: eta },
                 map: { type: "t", value: this.mirrorTarget.texture },
                 normalMap: { type: "t", value: null },
                 textureMatrix: { type: "m4", value: this.mirrorTextureMatrix },
+                waterDiffuse: { type: "c", value: new THREE.Color(0x002c4c) },
             },
 
             vertexShader: waterShaderLib.vertexShader,
