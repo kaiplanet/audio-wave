@@ -6,6 +6,8 @@ import * as assets from "../assets/assets";
 import { backgroundShaderLib } from "../shaders/ShaderLib";
 
 export default class extends Object {
+    public scene: THREE.Scene;
+
     public get brightness() {
         return this.cube.material[0].uniforms.brightness.value;
     }
@@ -14,12 +16,9 @@ export default class extends Object {
         this.cube.material.forEach((material) => {
             material.uniforms.brightness.value = brightness;
         });
-
-        this.camera.update(this.renderer, this.scene);
     }
 
     private renderer: THREE.WebGLRenderer;
-    private scene: THREE.Scene;
     private camera: THREE.CubeCamera;
     private cube: THREE.Mesh;
 
@@ -65,6 +64,10 @@ export default class extends Object {
             this.cube.material[index].uniforms.map.value = await loadTexture(path);
         }));
 
+        this.update();
+    }
+
+    public update() {
         this.camera.update(this.renderer, this.scene);
     }
 
@@ -72,10 +75,10 @@ export default class extends Object {
         this.renderer = renderer;
         this.scene = new THREE.Scene();
 
-        this.camera = new THREE.CubeCamera(.1, 1, 1280);
+        this.camera = new THREE.CubeCamera(.1, 10, 1280);
         this.camera.position.set(0, 0, 0);
 
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const geometry = new THREE.BoxGeometry(10, 10, 10);
 
         const materialArray = new Array(6).fill(null).map(() => new THREE.ShaderMaterial({
             uniforms: {

@@ -3,30 +3,43 @@ import * as THREE from "three";
 
 import CelestialBody from "./CelestialBody";
 
-import { animate } from "../../utils";
+export default class Sun extends CelestialBody {
+    protected static textureResolution = 512;
 
-export default class extends CelestialBody {
     constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3) {
         super(position, risePosition, setPosition);
 
         this.init();
     }
 
-    public rise() {
-        if (this.light) {
-            this.light.position.set(this.riseDirection.x, this.riseDirection.y, this.riseDirection.z);
-            animate(this.light.position, this.originDirection, 2, { delay: 1, ease: Power1.easeOut });
-        }
+    protected generateTexture() {
+        const resolution = Sun.textureResolution;
 
-        return this;
-    }
+        const textureData = new Uint8Array(resolution * resolution * 4).map((value, index) => {
+            const distance = Math.sqrt(Math.pow(Math.floor(index / 4 / resolution) - resolution / 2, 2)
+                + Math.pow(Math.abs(index / 4 % resolution - resolution / 2), 2));
 
-    public set() {
-        if (this.light) {
-            animate(this.light.position, this.setDirection, 4, { ease: Power1.easeIn });
-        }
+            if (distance >= resolution * .15) {
+                switch (index % 4) {
+                    case 0:
+                        return Math.max(254 - 8 * (distance - resolution * .15) / (resolution * .35), 0);
+                    case 1:
+                        return Math.max(254 - 102 * (distance - resolution * .15) / (resolution * .35), 0);
+                    case 2:
+                        return Math.max(95 - 41 * (distance - resolution * .15) / (resolution * .35), 0);
+                    case 3:
+                        return Math.max(255 - 255 * (distance - resolution * .15) / (resolution * .35), 0);
+                    default:
+                        return 0;
+                }
+            }
 
-        return this;
+            return 255;
+        });
+
+        this.texture = new THREE.DataTexture(textureData, resolution, resolution);
+        this.texture.generateMipmaps = true;
+        this.texture.needsUpdate = true;
     }
 
     protected init() {
@@ -43,5 +56,10 @@ export default class extends CelestialBody {
         super.init(light);
 
         return this;
+    }
+
+    protected initSprite() {
+        super.initSprite();
+        this.sprite.scale.set(.2, .2, 1);
     }
 }

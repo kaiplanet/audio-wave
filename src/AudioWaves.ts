@@ -8,6 +8,14 @@ import Water from "./objects/Water";
 
 import { animate } from "./utils";
 
+const NIGHT_BRIGHTNESS = .15;
+const SUN_DIRECTION = new THREE.Vector3(-2, 1, -8);
+const SUN_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
+const SUN_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
+const MOON_DIRECTION = new THREE.Vector3(0, 1, -8);
+const MOON_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
+const MOON_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
+
 interface IAudioWaves {
     init(width: number, height: number): this;
     mount(mountPoint: HTMLElement): HTMLElement;
@@ -17,14 +25,6 @@ interface IAudioWaves {
     switchToDay(): this;
     switchToNight(): this;
 }
-
-const NIGHT_BRIGHTNESS = .2;
-const SUN_DIRECTION = new THREE.Vector3(-1, 1, -5);
-const SUN_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
-const SUN_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
-const MOON_DIRECTION = new THREE.Vector3(0, 1, -5);
-const MOON_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
-const MOON_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
 
 export default class implements IAudioWaves {
     private renderer: THREE.WebGLRenderer;
@@ -62,10 +62,14 @@ export default class implements IAudioWaves {
         this.background.load();
 
         this.sun = new Sun(SUN_DIRECTION, SUN_RISE_DIRECTION, SUN_SET_DIRECTION);
-        this.sun.setPosition(SUN_RISE_DIRECTION);
+        this.sun.setDirection(SUN_RISE_DIRECTION);
+        this.sun.opacity = 0;
         this.sun.addTo(this.scene);
+        this.sun.setBackground(this.background);
         this.moon = new Moon(MOON_DIRECTION, MOON_RISE_DIRECTION, MOON_SET_DIRECTION);
         this.moon.addTo(this.scene);
+        this.moon.setBackground(this.background);
+        this.background.update();
 
         this.water = new Water(this.renderer);
         this.water.addTo(this.scene, new THREE.Vector3(0, 0, 0), this.camera);
@@ -116,18 +120,20 @@ export default class implements IAudioWaves {
 
     public switchToDay() {
         animate(this.background, { brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
-        this.sun.rise();
-        this.moon.set();
+        this.sun.rise(2, 1);
+        this.moon.set(3, 0);
         animate(this.hemisphereLight, { intensity: 1 }, 2, { delay: 1, ease: Power1.easeOut });
+        animate({}, {}, 3, { onUpdate: () => this.background.update() });
 
         return this;
     }
 
     public switchToNight() {
-        animate(this.background, { brightness: NIGHT_BRIGHTNESS }, 2, { delay: 1, ease: Power1.easeOut });
-        this.sun.set();
-        this.moon.rise();
-        animate(this.hemisphereLight, { intensity: NIGHT_BRIGHTNESS }, 4, { ease: Power1.easeIn });
+        animate(this.background, { brightness: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeOut });
+        this.sun.set(2, 0);
+        this.moon.rise(3, 1);
+        animate(this.hemisphereLight, { intensity: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeIn });
+        animate({}, {}, 4, { onUpdate: () => this.background.update() });
 
         return this;
     }
