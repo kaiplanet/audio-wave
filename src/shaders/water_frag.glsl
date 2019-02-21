@@ -3,7 +3,7 @@
 uniform vec3 diffuse;
 uniform vec3 emissive;
 uniform float opacity;
-uniform vec3 waterDiffuse;
+uniform vec3 waterColor;
 
 varying vec3 vLightFront;
 
@@ -43,6 +43,8 @@ varying float fresnelFactor;
 #include <logdepthbuf_pars_fragment>
 #include <clipping_planes_pars_fragment>
 
+const float reflectRate = 0.98;
+
 void main() {
 	#include <clipping_planes_fragment>
 
@@ -55,10 +57,9 @@ void main() {
 
     #ifdef USE_MAP
 
-    	vec4 texelColor = texture2DProj(map, vUv) * fresnelFactor + vec4(waterDiffuse, 1.0) * (1.0 - fresnelFactor);
+    	vec4 texelColor = texture2DProj(map, vUv) * fresnelFactor + vec4(waterColor, 1.0) * (1.0 - fresnelFactor);
 
     	texelColor = mapTexelToLinear(texelColor);
-    	diffuseColor *= texelColor;
 
     #endif
 
@@ -94,7 +95,7 @@ void main() {
 
 	#include <envmap_fragment>
 
-	gl_FragColor = vec4(outgoingLight, diffuseColor.a);
+	gl_FragColor = vec4(outgoingLight * (1.0 - reflectRate) + texelColor.rgb * reflectRate, diffuseColor.a);
 
 	#include <tonemapping_fragment>
 	#include <encodings_fragment>

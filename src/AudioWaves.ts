@@ -71,7 +71,7 @@ export default class implements IAudioWaves {
         this.moon.setBackground(this.background);
         this.background.update();
 
-        this.water = new Water(this.renderer);
+        this.water = new Water(this.renderer, { brightness: NIGHT_BRIGHTNESS });
         this.water.addTo(this.scene, new THREE.Vector3(0, 0, 0), this.camera);
 
         return this;
@@ -89,6 +89,10 @@ export default class implements IAudioWaves {
     }
 
     public start() {
+        if (this.active) {
+            return;
+        }
+
         this.active = true;
         this.water.startSimulation();
 
@@ -121,8 +125,11 @@ export default class implements IAudioWaves {
     public switchToDay() {
         animate(this.background, { brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
         this.sun.rise(2, 1);
-        this.moon.set(3, 0);
         animate(this.hemisphereLight, { intensity: 1 }, 2, { delay: 1, ease: Power1.easeOut });
+        animate(this.water, { brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
+
+        this.moon.set(3, 0);
+
         animate({}, {}, 3, { onUpdate: () => this.background.update() });
 
         return this;
@@ -131,8 +138,11 @@ export default class implements IAudioWaves {
     public switchToNight() {
         animate(this.background, { brightness: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeOut });
         this.sun.set(2, 0);
-        this.moon.rise(3, 1);
         animate(this.hemisphereLight, { intensity: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeIn });
+        animate(this.water, { brightness: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeOut });
+
+        this.moon.rise(3, 1);
+
         animate({}, {}, 4, { onUpdate: () => this.background.update() });
 
         return this;

@@ -37,8 +37,6 @@ varying float fresnelFactor;
 #include <logdepthbuf_pars_vertex>
 #include <clipping_planes_pars_vertex>
 
-const float mirrorFactor = 250.0;
-const float reflectRate = 0.95;
 const float sceneHeight = 600.0;
 
 void main() {
@@ -75,75 +73,7 @@ void main() {
 
 	#include <worldpos_vertex>
 	#include <envmap_vertex>
-//	#include <lights_lambert_vertex>
-
-    vec3 diffuse = vec3(1.0);
-
-    GeometricContext geometry;
-    geometry.position = mvPosition.xyz;
-    geometry.normal = normalize(transformedNormal);
-    geometry.viewDir = normalize(-mvPosition.xyz);
-
-    GeometricContext backGeometry;
-    backGeometry.position = geometry.position;
-    backGeometry.normal = -geometry.normal;
-    backGeometry.viewDir = geometry.viewDir;
-
-    vLightFront = vec3(0.0);
-
-    #ifdef DOUBLE_SIDED
-        vLightBack = vec3(0.0);
-    #endif
-
-    IncidentLight directLight;
-    float dotNL;
-    vec3 directLightColor_Diffuse;
-
-    #if NUM_DIR_LIGHTS > 0
-
-//        #pragma unroll_loop
-        for (int i = 0; i < NUM_DIR_LIGHTS; i++) {
-            getDirectionalDirectLightIrradiance(directionalLights[i], geometry, directLight);
-
-            dotNL = dot(geometry.normal, directLight.direction);
-            directLightColor_Diffuse = PI * directLight.color;
-
-            vec3 reflectDirection = reflect(-directLight.direction, geometry.normal);
-            float reflectStrength;
-
-            if (dotNL > 0.0) {
-                reflectStrength =
-                    pow(max(dot(reflectDirection, normalize(cameraPosition - position)), 0.0), mirrorFactor);
-            } else {
-                reflectStrength = 0.0;
-            }
-
-            vec3 vLightFrontComponent = saturate(dotNL) * directLightColor_Diffuse;
-
-            vec3 vLightFrontDiffuse = vLightFrontComponent * (1.0 - reflectRate);
-            vec3 vLightFrontMirror = vLightFrontComponent * reflectRate;
-
-            vLightFront += vLightFrontDiffuse + vLightFrontMirror * reflectStrength;
-        }
-
-    #endif
-
-    #if NUM_HEMI_LIGHTS > 0
-
-    	#pragma unroll_loop
-    	for ( int i = 0; i < NUM_HEMI_LIGHTS; i ++ ) {
-
-    		vLightFront += getHemisphereLightIrradiance( hemisphereLights[ i ], geometry );
-
-    		#ifdef DOUBLE_SIDED
-
-    			vLightBack += getHemisphereLightIrradiance( hemisphereLights[ i ], backGeometry );
-
-    		#endif
-
-    	}
-
-    #endif
+	#include <lights_lambert_vertex>
 
 	#include <shadowmap_vertex>
 	#include <fog_vertex>

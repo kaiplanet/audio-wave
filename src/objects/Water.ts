@@ -18,10 +18,17 @@ const HEIGHT = 600;
 const RESOLUTION = 512;
 const PLANE_NORMAL = new THREE.Vector3(0, 1, 0);
 const FRESNEL_REFLECTION_RATE = .5;
+const DEFAULT_WATER_COLOR = new THREE.Color(0x002c4c);
+
+interface IOptions {
+    color?: THREE.Color;
+    brightness?: number;
+}
 
 export default class extends Object {
+    public color: THREE.Color;
     private renderer: THREE.WebGLRenderer;
-    private cameara: THREE.Camera;
+    private camera: THREE.Camera;
     private plane: THREE.Mesh;
     private active = false;
     private bufferTargets: THREE.WebGLRenderTarget[];
@@ -38,17 +45,22 @@ export default class extends Object {
     private readonly mirrorTextureMatrix: THREE.Matrix4;
     private clock: THREE.Clock;
 
-    constructor(renderer: THREE.WebGLRenderer) {
+    public set brightness(brightness: number) {
+        this.plane.material.uniforms.waterColor.value = this.color.multiplyScalar(brightness);
+    }
+
+    constructor(renderer: THREE.WebGLRenderer, { color = DEFAULT_WATER_COLOR, brightness = 1 }: IOptions = {}) {
         super();
 
+        this.color = color;
         this.reflectMatrix = new THREE.Matrix4();
         this.mirrorTextureMatrix = new THREE.Matrix4();
-        this.init(renderer);
+        this.init(renderer, { brightness });
     }
 
     public addTo(scene: THREE.Scene, position: THREE.Vector3, camera: THREE.Camera) {
         this.mirrorScene = scene;
-        this.cameara = camera;
+        this.camera = camera;
         this.mirrorCamera = camera.clone();
 
         const distanceToOrigin = position.y;
@@ -180,7 +192,7 @@ export default class extends Object {
         return mountPoint;
     }
 
-    protected init(renderer: THREE.WebGLRenderer) {
+    protected init(renderer: THREE.WebGLRenderer, { brightness }: { brightness: number }) {
         this.renderer = renderer;
         this.activeBufferTargetIndex = 0;
 
@@ -190,7 +202,7 @@ export default class extends Object {
             format: THREE.RGBAFormat,
         });
 
-        this.createPlane();
+        this.createPlane(brightness);
         this.initBufferScene();
         this.plane.material.uniforms.normalMap.value = new THREE.CanvasTexture(this.bufferRenderer.domElement);
         this.clock = new THREE.Clock();
@@ -198,7 +210,7 @@ export default class extends Object {
         return this;
     }
 
-    private createPlane(): THREE.Mesh {
+    private createPlane(brightness: number): THREE.Mesh {
         const geometry = new THREE.PlaneGeometry(WIDTH, HEIGHT, RESOLUTION, RESOLUTION);
 
         const eta = (1 + Math.sqrt(FRESNEL_REFLECTION_RATE)) / (1 - Math.sqrt(FRESNEL_REFLECTION_RATE));
@@ -210,7 +222,7 @@ export default class extends Object {
                 map: { type: "t", value: this.mirrorTarget.texture },
                 normalMap: { type: "t", value: null },
                 textureMatrix: { type: "m4", value: this.mirrorTextureMatrix },
-                waterDiffuse: { type: "c", value: new THREE.Color(0x002c4c) },
+                waterColor: { type: "c", value: this.color.multiplyScalar(brightness) },
             },
 
             vertexShader: waterShaderLib.vertexShader,
@@ -228,7 +240,7 @@ export default class extends Object {
         plane.onBeforeRender = () => {
             if (this.mirrorScene && this.mirrorCamera && this.mirrorTarget) {
                 plane.visible = false;
-                this.mirrorCamera.position.copy(this.cameara);
+                this.mirrorCamera.matrix = this.camera.matrix.clone();
                 this.mirrorCamera.applyMatrix(this.reflectMatrix);
 
                 // Update the texture matrix
@@ -244,8 +256,8 @@ export default class extends Object {
                 this.mirrorTextureMatrix.multiply(this.plane.matrixWorld);
 
                 const currentRenderTarget = this.renderer.getRenderTarget();
-                const  currentVrEnabled = this.renderer.vr.enabled;
-                const  currentShadowAutoUpdate = this.renderer.shadowMap.autoUpdate;
+                const currentVrEnabled = this.renderer.vr.enabled;
+                const currentShadowAutoUpdate = this.renderer.shadowMap.autoUpdate;
 
                 this.renderer.vr.enabled = false; // Avoid camera modification and recursion
                 this.renderer.shadowMap.autoUpdate = false; // Avoid re-computing shadows
