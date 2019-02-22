@@ -4,12 +4,19 @@ uniform float k1;
 uniform float k2;
 uniform float k3;
 uniform float height;
+uniform sampler2D obstacleMap;
 
 varying vec2 vUv;
 
 const float offsetStride  = 1.0 / 512.0;
 
 void main() {
+    if (texture2D(obstacleMap, vUv).r != 0.0) {
+        gl_FragColor = vec4(0.0, 0.0, 1.0, 0.5);
+
+        return;
+    }
+
     vec2 coordsRelative[5];
 
     //    0
@@ -27,7 +34,11 @@ void main() {
     for (int i = 0; i < 5; i++) {
         vec2 texelCoords = vUv + coordsRelative[i];
 
-        sampleTexel[i] = texture2D(bufferMap, texelCoords);
+        if (texture2D(obstacleMap, texelCoords).r != 0.0) {
+            sampleTexel[i] = texture2D(bufferMap, vUv);
+        } else {
+            sampleTexel[i] = texture2D(bufferMap, texelCoords);
+        }
     }
 
     float offset = k1 * (sampleTexel[2].a + height) + k2 * (texture2D(bufferMapLast, vUv).a + height) +

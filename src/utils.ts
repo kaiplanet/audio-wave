@@ -32,4 +32,17 @@ function animate(target: any, vars: any, duration: number, options?: object) {
     }
 }
 
-export { animate };
+const textureLoader = new THREE.TextureLoader();
+
+function loadTexture(path: string) {
+    return new Promise((resolve, reject) => {
+        textureLoader.load(path, (texture: THREE.Texture) => {
+            resolve(texture);
+        }, null, (err) => {
+            reject(err);
+        });
+
+    });
+}
+
+export { animate, loadTexture };

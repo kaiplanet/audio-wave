@@ -2,6 +2,8 @@ import * as THREE from "three";
 
 import Object from "./Object";
 
+import { loadTexture } from "../utils";
+
 import * as assets from "../assets/assets";
 import { backgroundShaderLib } from "../shaders/ShaderLib";
 
@@ -43,19 +45,6 @@ export default class extends Object {
     }
 
     public async load() {
-        const textureLoader = new THREE.TextureLoader();
-
-        const loadTexture = (path: string) => {
-            return new Promise((resolve, reject) => {
-                textureLoader.load(path, (texture: THREE.Texture) => {
-                    resolve(texture);
-                }, null, (err) => {
-                    reject(err);
-                });
-
-            });
-        };
-
         await Promise.all([
             assets.BACKGROUND_PX, assets.BACKGROUND_NX,
             assets.BACKGROUND_PY, assets.BACKGROUND_NY,

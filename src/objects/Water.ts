@@ -2,7 +2,10 @@ import * as THREE from "three";
 
 import Object from "./Object";
 
+import { WATER_OBSTACLE_MAP } from "../assets/assets";
 import { waterNormalMapShaderLib, waterShaderLib } from "../shaders/ShaderLib";
+
+import { loadTexture } from "../utils";
 
 const WAVE_SPEED = 60 * .637731533050537209295072216; // Pixel per millisecond.
 const RESISTANCE_FACTOR = 0.01;
@@ -38,6 +41,7 @@ export default class extends Object {
     private bufferScene: THREE.Scene;
     private bufferSceneCamera: THREE.Camera;
     private bufferMaterial: THREE.ShaderMaterial;
+    private obstacleMap: THREE.Texture;
     private mirrorScene: THREE.Scene;
     private mirrorTarget: THREE.WebGLRenderTarget;
     private mirrorCamera: THREE.Camera;
@@ -158,11 +162,6 @@ export default class extends Object {
             buffer,
         );
 
-        const ctx = this.bufferContext;
-        const activeTextureUnit = ctx.getParameter(ctx.TEXTURE_BINDING_2D);
-
-        ctx.bindTexture(ctx.TEXTURE_2D, textureUnit);
-
         const texture = new ImageData(Uint8ClampedArray.from(buffer).map((value, index) => {
             if (index % 4 === 3) {
                 return value + sourceTexture.data[index] - 128;
@@ -170,6 +169,11 @@ export default class extends Object {
 
             return value;
         }), sourceTexture.width, sourceTexture.height);
+
+        const ctx = this.bufferContext;
+        const activeTextureUnit = ctx.getParameter(ctx.TEXTURE_BINDING_2D);
+
+        ctx.bindTexture(ctx.TEXTURE_2D, textureUnit);
 
         ctx.texSubImage2D(
             ctx.TEXTURE_2D,
@@ -181,7 +185,6 @@ export default class extends Object {
             texture,
         );
 
-        ctx.generateMipmap(ctx.TEXTURE_2D);
         ctx.bindTexture(ctx.TEXTURE_2D, activeTextureUnit);
     }
 
@@ -286,9 +289,7 @@ export default class extends Object {
 
         this.bufferTargets = new Array(3)
             .fill(null)
-            .map(() => new THREE.WebGLRenderTarget(TEXTURE_WITDH, TEXTURE_HEIGHT, {
-                format: THREE.RGBAFormat,
-            }));
+            .map(() => new THREE.WebGLRenderTarget(TEXTURE_WITDH, TEXTURE_HEIGHT, { format: THREE.RGBAFormat }));
 
         this.bufferScene = new THREE.Scene();
 
@@ -344,6 +345,7 @@ export default class extends Object {
                 k1: { type: "f", value: k1 },
                 k2: {type: "f", value: k2 },
                 k3: { type: "f", value: k3 },
+                obstacleMap: { type: "t", value: null },
             },
 
             vertexShader: waterNormalMapShaderLib.vertexShader,
@@ -380,12 +382,13 @@ export default class extends Object {
             null,
         );
 
-        ctx.generateMipmap(ctx.TEXTURE_2D);
         ctx.bindTexture(ctx.TEXTURE_2D, activeTextureUnit);
 
         this.bufferTargets.forEach((target: THREE.WebGLRenderTarget) => {
             this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, target);
         });
+
+        this.loadObstacleMap();
 
         return this;
     }
@@ -428,5 +431,9 @@ export default class extends Object {
 
     private getBufferMapLast() {
         return this.bufferTargets[this.getBufferMapLastIndex()].texture;
+    }
+
+    private async loadObstacleMap() {
+        this.bufferMaterial.uniforms.obstacleMap.value = await loadTexture(WATER_OBSTACLE_MAP);
     }
 }
