@@ -15,9 +15,11 @@ export default class extends Object {
     }
 
     public set brightness(brightness: number) {
-        this.cube.material.forEach((material) => {
-            material.uniforms.brightness.value = brightness;
-        });
+        if (this.cube.material instanceof Array) {
+            this.cube.material.forEach((material) => {
+                (material as any).uniforms.brightness.value = brightness;
+            });
+        }
     }
 
     private renderer: THREE.WebGLRenderer;
@@ -31,7 +33,7 @@ export default class extends Object {
     }
 
     public addTo(scene: THREE.Scene) {
-        scene.background = this.camera.renderTarget;
+        (scene.background as any) = this.camera.renderTarget;
 
         return this;
     }

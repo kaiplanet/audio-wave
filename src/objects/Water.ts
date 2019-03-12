@@ -33,6 +33,7 @@ export default class extends Object {
     private renderer: THREE.WebGLRenderer;
     private camera: THREE.Camera;
     private plane: THREE.Mesh;
+    private planeMaterial: THREE.ShaderMaterial;
     private active = false;
     private bufferTargets: THREE.WebGLRenderTarget[];
     private activeBufferTargetIndex: number;
@@ -50,7 +51,7 @@ export default class extends Object {
     private clock: THREE.Clock;
 
     public set brightness(brightness: number) {
-        this.plane.material.uniforms.waterColor.value = this.color.multiplyScalar(brightness);
+        this.planeMaterial.uniforms.waterColor.value = this.color.multiplyScalar(brightness);
     }
 
     constructor(renderer: THREE.WebGLRenderer, { color = DEFAULT_WATER_COLOR, brightness = 1 }: IOptions = {}) {
@@ -111,7 +112,7 @@ export default class extends Object {
             this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera);
             // }
 
-            this.plane.material.uniforms.normalMap.value.needsUpdate = true;
+            this.planeMaterial.uniforms.normalMap.value.needsUpdate = true;
             this.swapActiveBufferTargets();
         };
 
@@ -207,7 +208,7 @@ export default class extends Object {
 
         this.createPlane(brightness);
         this.initBufferScene();
-        this.plane.material.uniforms.normalMap.value = new THREE.CanvasTexture(this.bufferRenderer.domElement);
+        this.planeMaterial.uniforms.normalMap.value = new THREE.CanvasTexture(this.bufferRenderer.domElement);
         this.clock = new THREE.Clock();
 
         return this;
@@ -276,6 +277,7 @@ export default class extends Object {
         };
 
         this.plane = plane;
+        this.planeMaterial = material;
         this.objects.push(plane);
 
         return plane;

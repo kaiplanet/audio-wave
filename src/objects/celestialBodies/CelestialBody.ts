@@ -111,7 +111,7 @@ export default abstract class CelestialBody extends Object {
     public addTo(scene: THREE.Scene) {
         scene.add(this.light);
 
-        if (process.env.NODE_ENV === "development" && this.light) {
+        if (process.env.NODE_ENV === "development" && this.light && this.light instanceof THREE.DirectionalLight) {
             scene.add(new THREE.DirectionalLightHelper(this.light));
         }
 
@@ -141,11 +141,11 @@ export default abstract class CelestialBody extends Object {
     protected initSprite() {
         const material = new THREE.SpriteMaterial({ map: this.texture });
 
+        (material as any).sizeAttenuation = false;
         this.sprite = new THREE.Sprite(material);
 
         const position = this.originDirection.clone().normalize().multiplyScalar(CelestialBody.spriteDistance);
 
-        this.sprite.sizeAttenuation = false;
         this.sprite.scale.set(.1, .1, 1);
         this.sprite.position.set(position.x, position.y, position.z);
     }
