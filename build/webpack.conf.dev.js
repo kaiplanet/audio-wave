@@ -39,7 +39,7 @@ module.exports = {
                 loader: 'raw-loader'
             },
             {
-                test: /\.jpg$/,
+                test: /\.(?:jpg|png)$/,
                 exclude: /node_modules/,
                 loader: 'url-loader?limit=8192'
             }
@@ -55,6 +55,6 @@ module.exports = {
         new ThreeWebpackPlugin()
     ],
     resolve: {
-        extensions: [ '.ts', '.glsl', '.js', '.jpg' ]
+        extensions: [ '.ts', '.glsl', '.js', '.jpg', '.png' ]
     }
 };

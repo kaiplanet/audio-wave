@@ -32,11 +32,11 @@ export default abstract class CelestialBody extends Object {
     private static spriteDistance = SPRITE_DISTANCE;
 
     protected sprite: THREE.Sprite;
+    protected spriteMaterial: THREE.SpriteMaterial;
     protected light: THREE.Light;
     protected originDirection: THREE.Vector3;
     protected riseDirection: THREE.Vector3;
     protected downDirection: THREE.Vector3;
-    protected texture: THREE.Texture;
     protected background: Background;
 
     public set opacity(opacity: number) {
@@ -125,23 +125,24 @@ export default abstract class CelestialBody extends Object {
         return this;
     }
 
-    protected abstract generateTexture();
+    protected abstract loadTexture();
 
     protected init(light: THREE.Light) {
         light.position.set(this.originDirection.x, this.originDirection.y, this.originDirection.z);
         this.light = light;
         this.objects.push(light);
 
-        this.generateTexture();
         this.initSprite();
+        this.loadTexture();
 
         return this;
     }
 
     protected initSprite() {
-        const material = new THREE.SpriteMaterial({ map: this.texture });
+        const material = new THREE.SpriteMaterial({ map: null });
 
         (material as any).sizeAttenuation = false;
+        this.spriteMaterial = material;
         this.sprite = new THREE.Sprite(material);
 
         const position = this.originDirection.clone().normalize().multiplyScalar(CelestialBody.spriteDistance);

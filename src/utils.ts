@@ -45,4 +45,24 @@ function loadTexture(path: string) {
     });
 }
 
-export { animate, loadTexture };
+const imageLoader = new THREE.ImageLoader();
+
+function loadImageData(path: string): Promise<ImageData> {
+    return new Promise((resolve, reject) => {
+        imageLoader.load(path, (image) => {
+            const canvas = document.createElement("canvas");
+
+            canvas.width = image.width;
+            canvas.height = image.height;
+
+            const ctx = canvas.getContext("2d");
+
+            ctx.drawImage(image, 0, 0);
+            resolve(ctx.getImageData(0, 0, image.width, image.height));
+        }, null, (err) => {
+            reject(err);
+        });
+    });
+}
+
+export { animate, loadTexture, loadImageData };
