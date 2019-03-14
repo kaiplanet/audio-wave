@@ -2,6 +2,7 @@
 
 uniform vec3 diffuse;
 uniform float opacity;
+uniform float alpha;
 uniform float brightness;
 
 #ifndef FLAT_SHADED
@@ -14,7 +15,11 @@ uniform float brightness;
 #include <color_pars_fragment>
 #include <uv_pars_fragment>
 #include <uv2_pars_fragment>
-#include <map_pars_fragment>
+//#include <map_pars_fragment>
+
+uniform sampler2D map0;
+uniform sampler2D map1;
+
 #include <alphamap_pars_fragment>
 #include <aomap_pars_fragment>
 #include <lightmap_pars_fragment>
@@ -30,7 +35,13 @@ void main() {
 	vec4 diffuseColor = vec4(diffuse, opacity);
 
 	#include <logdepthbuf_fragment>
-	#include <map_fragment>
+//	#include <map_fragment>
+
+	vec4 texelColor0 = texture2D(map0, vUv);
+	vec4 texelColor1 = texture2D(map1, vUv);
+
+	diffuseColor *= mapTexelToLinear(texelColor0 * alpha + texelColor1 * (1.0 - alpha));
+
 	#include <color_fragment>
 	#include <alphamap_fragment>
 	#include <alphatest_fragment>

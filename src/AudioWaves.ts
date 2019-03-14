@@ -9,7 +9,7 @@ import Water from "./objects/Water";
 import { animate } from "./utils";
 
 const NIGHT_BRIGHTNESS = .15;
-const SUN_DIRECTION = new THREE.Vector3(-2, 1, -8);
+const SUN_DIRECTION = new THREE.Vector3(-2, 1.2, -8);
 const SUN_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
 const SUN_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
 const MOON_DIRECTION = new THREE.Vector3(0, 1, -8);
@@ -51,13 +51,15 @@ export default class implements IAudioWaves {
         }
 
         this.camera = new THREE.PerspectiveCamera(45, width / height, .1, 1000);
-        this.camera.position.set(0, 60, 430);
+        this.camera.position.set(0, 50, 430);
         this.camera.lookAt(this.scene.position);
 
         this.hemisphereLight = new THREE.HemisphereLight( 0xfff2e4, 0x080820, .2);
         this.scene.add(this.hemisphereLight);
 
-        this.background = new Background(this.renderer, { brightness: NIGHT_BRIGHTNESS });
+        this.background = new Background(this.renderer);
+        this.background.alpha = 0;
+        this.background.brightness = .05;
         this.background.addTo(this.scene);
         this.background.load();
 
@@ -123,7 +125,7 @@ export default class implements IAudioWaves {
     }
 
     public switchToDay() {
-        animate(this.background, { brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
+        animate(this.background, { alpha: 1, brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
         this.sun.rise(2, 1);
         animate(this.hemisphereLight, { intensity: 1 }, 2, { delay: 1, ease: Power1.easeOut });
         animate(this.water, { brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
@@ -136,9 +138,9 @@ export default class implements IAudioWaves {
     }
 
     public switchToNight() {
-        animate(this.background, { brightness: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeOut });
+        animate(this.background, { alpha: 0, brightness: .05 }, 2, { ease: Power1.easeOut });
         this.sun.set(2, 0);
-        animate(this.hemisphereLight, { intensity: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeIn });
+        animate(this.hemisphereLight, { intensity: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeOut });
         animate(this.water, { brightness: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeOut });
 
         this.moon.rise(3, 1);
