@@ -1,6 +1,5 @@
 'use strict';
 
-
 const path = require('path');
 
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -39,7 +38,7 @@ module.exports = {
                 loader: 'raw-loader'
             },
             {
-                test: /\.(?:jpg|png)$/,
+                test: /\.(?:jpg|png|obj|mtl|dds)$/,
                 exclude: /node_modules/,
                 loader: 'url-loader?limit=8192'
             }
