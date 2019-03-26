@@ -20,5 +20,5 @@ export default abstract class {
     public abstract startSimulation(): this;
     public abstract stopSimulation(): this;
 
-    protected abstract init(...params: any): this;
+    protected abstract init(...params: any): this|Promise<this>;
 }

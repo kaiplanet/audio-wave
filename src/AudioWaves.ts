@@ -4,11 +4,10 @@ import * as THREE from "three";
 import Background from "./objects/Background";
 import Moon from "./objects/celestialBodies/Moon";
 import Sun from "./objects/celestialBodies/Sun";
+import Grass from "./objects/Grass";
 import Water from "./objects/Water";
 
-import { GRASS_MATERIAL, GRASS_OBJECT, GRASS_TEXTURE } from "./assets/assets";
-
-import { animate, loadOBJMTLModel } from "./utils";
+import { animate } from "./utils";
 
 const NIGHT_BRIGHTNESS = .15;
 const SUN_DIRECTION = new THREE.Vector3(-2, 1.2, -8);
@@ -78,16 +77,9 @@ export default class implements IAudioWaves {
         this.water = new Water(this.renderer, { brightness: NIGHT_BRIGHTNESS });
         this.water.addTo(this.scene, new THREE.Vector3(0, 0, 0), this.camera);
 
-        const grass = await loadOBJMTLModel(GRASS_OBJECT, GRASS_MATERIAL, GRASS_TEXTURE);
+        const grass = new Grass();
 
-        // Only grass.children[1] is needed
-        grass.children[0].visible = false;
-        grass.children[2].visible = false;
-
-        grass.rotation.set(Math.PI, 0, 0);
-        grass.scale.set(.2, .2, .2);
-        grass.position.set(60, 10, 250);
-        this.scene.add(grass);
+        grass.addTo(this.scene, new THREE.Vector3(60, 0, 250));
 
         return this;
     }

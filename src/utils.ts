@@ -141,4 +141,4 @@ async function loadDDSTexture(path: string): Promise<THREE.CompressedTexture> {
     });
 }
 
-export { animate, loadTexture, loadImageData, loadOBJMTLModel };
+export { animate, loadTexture, loadImageData, loadOBJMTLModel, loadDDSTexture };

@@ -1,5 +1,7 @@
 export const background_frag: string;
 export const background_vert: string;
+export const grass_frag: string;
+export const grass_vert: string;
 export const meanfilter_frag: string;
 export const meanfilter_vert: string;
 export const water_vert: string;
