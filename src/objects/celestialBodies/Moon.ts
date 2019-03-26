@@ -7,10 +7,10 @@ import { MOON } from "../../assets/assets";
 import { loadImageData } from "../../utils";
 
 export default class Moon extends CelestialBody {
-    constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3) {
-        super(position, risePosition, setPosition);
+    constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3, options) {
+        super(position, risePosition, setPosition, options);
 
-        this.init();
+        this.init(options);
     }
 
     protected loadTexture() {
@@ -47,8 +47,8 @@ export default class Moon extends CelestialBody {
         this.loadImageTexture();
     }
 
-    protected init() {
-        const light = new THREE.DirectionalLight(0xe6f5ff, 10);
+    protected init({ intensity }) {
+        const light = new THREE.DirectionalLight(0xe6f5ff, intensity);
 
         light.castShadow = true;
         light.shadow.camera.near = 0.5;

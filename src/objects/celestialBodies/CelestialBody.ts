@@ -27,10 +27,22 @@ const getAngle = (a: THREE.Vector3, b: THREE.Vector3): number => {
     }
 };
 
-export default abstract class CelestialBody extends Object {
+interface ICelestialBody {
+    opacity: number;
+    setDirection(direction: THREE.Vector3): this;
+    rise(duration: number, delay: number): this;
+    set(duration: number, delay: number): this;
+    setBackground(background: Background): this;
+}
+
+interface IOptions {
+    intensity?: number;
+}
+
+export default abstract class CelestialBody extends Object implements ICelestialBody {
     protected static textureResolution = TEXTURE_RESOLUTION;
     private static spriteDistance = SPRITE_DISTANCE;
-
+    protected intensity: number;
     protected sprite: THREE.Sprite;
     protected spriteMaterial: THREE.SpriteMaterial;
     protected light: THREE.Light;
@@ -39,19 +51,29 @@ export default abstract class CelestialBody extends Object {
     protected downDirection: THREE.Vector3;
     protected background: Background;
 
-    public set opacity(opacity: number) {
+    public set opacity(opacity) {
         this.sprite.material.opacity = opacity;
+
+        if (this.light) {
+            this.light.intensity = this.intensity * opacity;
+        }
     }
 
-    protected constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3) {
+    public get opacity() {
+        return this.sprite.material.opacity;
+    }
+
+    protected constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3,
+                          { intensity = 1 }: IOptions = {}) {
         super();
 
         this.originDirection = position.clone().normalize();
         this.riseDirection = risePosition.clone().normalize();
         this.downDirection = setPosition.clone().normalize();
+        this.intensity = intensity;
     }
 
-    public setDirection(direction: THREE.Vector3) {
+    public setDirection(direction) {
         const normalizedDirection = direction.clone().normalize();
 
         if (this.light) {
@@ -61,9 +83,11 @@ export default abstract class CelestialBody extends Object {
         if (this.sprite) {
             this.sprite.position.set(normalizedDirection.x, normalizedDirection.y, normalizedDirection.z);
         }
+
+        return this;
     }
 
-    public rise(duration: number, delay: number): this {
+    public rise(duration, delay) {
         this.setDirection(this.riseDirection);
         this.sprite.material.opacity = 0;
 
@@ -83,10 +107,10 @@ export default abstract class CelestialBody extends Object {
         return this;
     }
 
-    public set(duration: number, delay: number): this {
+    public set(duration, delay) {
         const currentDirection = this.sprite.position.clone();
         const rotationAxis = getRotationAxis(currentDirection, this.downDirection);
-        const varsObj = { angle: 0, opacity: this.sprite.material.opacity };
+        const varsObj = { angle: 0, opacity: this.opacity };
 
         animate(varsObj, { angle: -getAngle(this.downDirection, currentDirection), opacity: 0 }, duration, {
             delay,
@@ -108,7 +132,7 @@ export default abstract class CelestialBody extends Object {
         return this;
     }
 
-    public addTo(scene: THREE.Scene) {
+    public addTo(scene) {
         scene.add(this.light);
 
         if (process.env.NODE_ENV === "development" && this.light && this.light instanceof THREE.DirectionalLight) {
@@ -118,7 +142,7 @@ export default abstract class CelestialBody extends Object {
         return this;
     }
 
-    public setBackground(background: Background): this {
+    public setBackground(background) {
         background.scene.add(this.sprite);
         this.background = background;
 
@@ -129,6 +153,7 @@ export default abstract class CelestialBody extends Object {
 
     protected init(light: THREE.Light) {
         light.position.set(this.originDirection.x, this.originDirection.y, this.originDirection.z);
+        light.intensity = this.intensity;
         this.light = light;
         this.objects.push(light);
 

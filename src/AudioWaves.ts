@@ -9,13 +9,16 @@ import Water from "./objects/Water";
 
 import { animate } from "./utils";
 
+const DAY_BRIGHTNESS = .5;
 const NIGHT_BRIGHTNESS = .15;
 const SUN_DIRECTION = new THREE.Vector3(-2, 1.2, -8);
 const SUN_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
 const SUN_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
+const SUN_INTENSITY = 3;
 const MOON_DIRECTION = new THREE.Vector3(0, 1, -8);
 const MOON_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
 const MOON_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
+const MOON_INTENSITY = .8;
 
 interface IAudioWaves {
     init(width: number, height: number): Promise<this>;
@@ -55,7 +58,7 @@ export default class implements IAudioWaves {
         this.camera.position.set(0, 50, 430);
         this.camera.lookAt(this.scene.position);
 
-        this.hemisphereLight = new THREE.HemisphereLight( 0xfff2e4, 0x080820, .2);
+        this.hemisphereLight = new THREE.HemisphereLight(0xfff2e4, 0x080820, .2);
         this.scene.add(this.hemisphereLight);
 
         this.background = new Background(this.renderer);
@@ -64,12 +67,12 @@ export default class implements IAudioWaves {
         this.background.addTo(this.scene);
         this.background.load();
 
-        this.sun = new Sun(SUN_DIRECTION, SUN_RISE_DIRECTION, SUN_SET_DIRECTION);
+        this.sun = new Sun(SUN_DIRECTION, SUN_RISE_DIRECTION, SUN_SET_DIRECTION, { intensity: SUN_INTENSITY });
         this.sun.setDirection(SUN_RISE_DIRECTION);
         this.sun.opacity = 0;
         this.sun.addTo(this.scene);
         this.sun.setBackground(this.background);
-        this.moon = new Moon(MOON_DIRECTION, MOON_RISE_DIRECTION, MOON_SET_DIRECTION);
+        this.moon = new Moon(MOON_DIRECTION, MOON_RISE_DIRECTION, MOON_SET_DIRECTION, { intensity: MOON_INTENSITY });
         this.moon.addTo(this.scene);
         this.moon.setBackground(this.background);
         this.background.update();
@@ -132,8 +135,8 @@ export default class implements IAudioWaves {
     public switchToDay() {
         animate(this.background, { alpha: 1, brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
         this.sun.rise(2, 1);
-        animate(this.hemisphereLight, { intensity: 1 }, 2, { delay: 1, ease: Power1.easeOut });
-        animate(this.water, { brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
+        animate(this.hemisphereLight, { intensity: DAY_BRIGHTNESS }, 2, { delay: 1, ease: Power1.easeOut });
+        animate(this.water, { brightness: DAY_BRIGHTNESS }, 2, { delay: 1, ease: Power1.easeOut });
 
         this.moon.set(3, 0);
 

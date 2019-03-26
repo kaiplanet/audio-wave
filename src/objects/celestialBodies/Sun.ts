@@ -6,10 +6,10 @@ import CelestialBody from "./CelestialBody";
 export default class Sun extends CelestialBody {
     protected static textureResolution = 512;
 
-    constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3) {
-        super(position, risePosition, setPosition);
+    constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3, options) {
+        super(position, risePosition, setPosition, options);
 
-        this.init();
+        this.init(options);
     }
 
     protected loadTexture() {
@@ -47,8 +47,8 @@ export default class Sun extends CelestialBody {
         this.spriteMaterial.map = texture;
     }
 
-    protected init() {
-        const light = new THREE.DirectionalLight(0xff9e3a, 20);
+    protected init({ intensity }) {
+        const light = new THREE.DirectionalLight(0xff9e3a, intensity);
 
         light.castShadow = true;
         light.shadow.camera.near = 0.5;
