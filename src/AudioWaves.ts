@@ -1,6 +1,7 @@
 import { Power1 } from "gsap/all";
 import * as THREE from "three";
 
+import Controls from "./Controls";
 import Background from "./objects/Background";
 import Moon from "./objects/celestialBodies/Moon";
 import Sun from "./objects/celestialBodies/Sun";
@@ -34,13 +35,12 @@ export default class implements IAudioWaves {
     private renderer: THREE.WebGLRenderer;
     private scene: THREE.Scene;
     private camera: THREE.PerspectiveCamera;
+    private water: Water;
     private background: Background;
     private sun: Sun;
     private moon: Moon;
     private hemisphereLight: THREE.HemisphereLight;
     private active: boolean;
-
-    private water: Water;
 
     public async init(width: number, height: number) {
         this.renderer = new THREE.WebGLRenderer();
@@ -83,6 +83,11 @@ export default class implements IAudioWaves {
         const grass = new Grass();
 
         grass.addTo(this.scene, new THREE.Vector3(60, 0, 250));
+
+        const controls = new Controls({ rotateSpeed: .03, zoomSpeed: .01 });
+
+        controls.connect(this.camera);
+        controls.listen(window);
 
         return this;
     }
