@@ -42,16 +42,20 @@ export default class extends Object {
     private bufferScene: THREE.Scene;
     private bufferSceneCamera: THREE.Camera;
     private bufferMaterial: THREE.ShaderMaterial;
-    private obstacleMap: THREE.Texture;
     private mirrorScene: THREE.Scene;
     private mirrorTarget: THREE.WebGLRenderTarget;
     private mirrorCamera: THREE.Camera;
+    private privateBrightness: number;
     private readonly reflectMatrix: THREE.Matrix4;
     private readonly mirrorTextureMatrix: THREE.Matrix4;
-    private clock: THREE.Clock;
+
+    public get brightness() {
+        return this.privateBrightness;
+    }
 
     public set brightness(brightness: number) {
-        this.planeMaterial.uniforms.waterColor.value = this.color.multiplyScalar(brightness);
+        this.privateBrightness = brightness;
+        this.planeMaterial.uniforms.waterColor.value = this.color.clone().multiplyScalar(brightness);
     }
 
     constructor(renderer: THREE.WebGLRenderer, { color = DEFAULT_WATER_COLOR, brightness = 1 }: IOptions = {}) {
@@ -116,8 +120,10 @@ export default class extends Object {
             this.swapActiveBufferTargets();
         };
 
+        const clock = new THREE.Clock();
+
         const tick = () => {
-            const delta = this.clock.getDelta();
+            const delta = clock.getDelta();
 
             waveSimulationTick(delta);
 
@@ -206,15 +212,15 @@ export default class extends Object {
             format: THREE.RGBAFormat,
         });
 
-        this.createPlane(brightness);
+        this.createPlane();
+        this.brightness = brightness;
         this.initBufferScene();
         this.planeMaterial.uniforms.normalMap.value = new THREE.CanvasTexture(this.bufferRenderer.domElement);
-        this.clock = new THREE.Clock();
 
         return this;
     }
 
-    private createPlane(brightness: number): THREE.Mesh {
+    private createPlane(): THREE.Mesh {
         const geometry = new THREE.PlaneGeometry(WIDTH, HEIGHT, RESOLUTION, RESOLUTION);
 
         const eta = (1 + Math.sqrt(FRESNEL_REFLECTION_RATE)) / (1 - Math.sqrt(FRESNEL_REFLECTION_RATE));
@@ -226,7 +232,7 @@ export default class extends Object {
                 map: { type: "t", value: this.mirrorTarget.texture },
                 normalMap: { type: "t", value: null },
                 textureMatrix: { type: "m4", value: this.mirrorTextureMatrix },
-                waterColor: { type: "c", value: this.color.multiplyScalar(brightness) },
+                waterColor: { type: "c", value: null },
             },
 
             vertexShader: waterShaderLib.vertexShader,

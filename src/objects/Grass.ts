@@ -46,7 +46,7 @@ export default class extends Object {
     protected async init() {
         const grassTexturePromise  = loadDDSTexture(GRASS_TEXTURE);
         const grassModelPromise = loadOBJMTLModel(GRASS_OBJECT, GRASS_MATERIAL);
-        const grassModel = ((await grassModelPromise).children[1] as THREE.Mesh);
+        const grassModel = (await grassModelPromise).children[1] as THREE.Mesh;
 
         const grassMaterial = new THREE.ShaderMaterial({
             uniforms: {
