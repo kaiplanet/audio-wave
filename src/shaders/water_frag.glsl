@@ -57,7 +57,7 @@ void main() {
 
     #ifdef USE_MAP
 
-    	vec4 texelColor = texture2DProj(map, vUv) * fresnelFactor + vec4(waterColor, 1.0) * (1.0 - fresnelFactor);
+    	vec4 texelColor = vec4(texture2DProj(map, vUv).rgb * fresnelFactor + waterColor * (1.0 - fresnelFactor), 1.0);
 
     	texelColor = mapTexelToLinear(texelColor);
 

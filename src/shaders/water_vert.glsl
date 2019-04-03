@@ -44,13 +44,13 @@ void main() {
 	#include <uv2_vertex>
 	#include <color_vertex>
 
-	vec3 objectNormal = texture2D(normalMap, uv).xyz;
+	vec3 objectNormal = normalize(texture2D(normalMap, uv).xyz);
 
     vUv = textureMatrix * vec4(position, 1.0)
         + vec4(objectNormal.x  / objectNormal.z * sceneHeight, objectNormal.y / objectNormal.z * sceneHeight, 0.0, 0.0);
 
     vec3 incidentLightDirection = reflect(position - cameraPosition, objectNormal);
-    float texDotNL = dot(normalize(incidentLightDirection), normalize(objectNormal));
+    float texDotNL = dot(normalize(incidentLightDirection), objectNormal);
     float g = sqrt(pow(eta, 2.0) - 1.0 + pow(texDotNL, 2.0));
     float f1 = g - texDotNL;
     float f2 = g + texDotNL;
