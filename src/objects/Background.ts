@@ -114,7 +114,5 @@ export default class extends Object {
         this.cube.position.set(0, 0, 0);
         this.cube.rotation.set(0, Math.PI * -.1, 0);
         this.scene.add(this.cube);
-
-        return this;
     }
 }

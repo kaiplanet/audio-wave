@@ -1,8 +1,8 @@
 import { TweenLite } from "gsap/all";
 import * as THREE from "three";
-import { DDSLoader } from "three/examples/js/loaders/DDSLoader";
-import { MTLLoader } from "three/examples/js/loaders/MTLLoader";
-import { OBJLoader } from "three/examples/js/loaders/OBJLoader";
+import "three/examples/js/loaders/DDSLoader";
+import "three/examples/js/loaders/MTLLoader";
+import "three/examples/js/loaders/OBJLoader";
 
 function animate(target: THREE.Vector3, vars: THREE.Vector3, duration: number, options?: object);
 function animate(target: object, vars: object, duration: number, options?: object);
@@ -68,7 +68,7 @@ function loadImageData(path: string): Promise<ImageData> {
     });
 }
 
-async function loadOBJMTLModel(objPath: string, mtlPath: string, texturePath?: string): Promise<THREE.Mesh> {
+async function loadOBJMTLModel(objPath: string, mtlPath: string, texturePath?: string): Promise<THREE.Object3D> {
     const texturePromise = ((path) => {
         if (!path) {
             return null;
@@ -82,7 +82,7 @@ async function loadOBJMTLModel(objPath: string, mtlPath: string, texturePath?: s
     })(texturePath);
 
     const mtlPromise = new Promise<THREE.MaterialCreator>((resolve, reject) => {
-        const loader = new MTLLoader();
+        const loader = new THREE.MTLLoader();
 
         loader.load(mtlPath, (materialCreator) => {
             if (texturePath && !texturePromise) {
@@ -101,8 +101,8 @@ async function loadOBJMTLModel(objPath: string, mtlPath: string, texturePath?: s
         }, null, (err) => reject(err));
     });
 
-    const objPromise = new Promise<THREE.Mesh>(async (resolve, reject) => {
-        const loader = new OBJLoader();
+    const objPromise = new Promise<THREE.Object3D>(async (resolve, reject) => {
+        const loader = new THREE.OBJLoader();
         const materialCreator = await mtlPromise;
 
         loader.setMaterials(materialCreator);
@@ -111,15 +111,20 @@ async function loadOBJMTLModel(objPath: string, mtlPath: string, texturePath?: s
             const texture = await texturePromise;
 
             object.traverse((child) => {
-                if (child.isMesh) {
-                    if (texture) {
-                        child.material.map = texture;
-                    }
+                if (child instanceof THREE.Mesh) {
+                    if (child.material instanceof THREE.Material) {
+                        if (texture && Reflect.has(child.material, "map")) {
+                            (child.material as any).map = texture;
+                        }
 
-                    child.material.transparent = true;
-                    child.material.alphaTest = .1;
-                    child.material.side = THREE.DoubleSide;
-                    child.material.shadowSide = THREE.DoubleSide;
+                        child.material.transparent = true;
+                        child.material.alphaTest = .1;
+                        child.material.side = THREE.DoubleSide;
+
+                        if (Reflect.has(child.material, "shadowSide")) {
+                            (child.material as any).shadowSide = THREE.DoubleSide;
+                        }
+                    }
 
                     child.castShadow = true;
                     child.receiveShadow = true;
@@ -134,7 +139,7 @@ async function loadOBJMTLModel(objPath: string, mtlPath: string, texturePath?: s
 }
 
 async function loadDDSTexture(path: string): Promise<THREE.CompressedTexture> {
-    const loader = new DDSLoader();
+    const loader = new THREE.DDSLoader();
 
     return await new Promise<THREE.CompressedTexture>((resolve, reject) => {
         loader.load(path, (texture) => resolve(texture), null, (err) => reject(err));

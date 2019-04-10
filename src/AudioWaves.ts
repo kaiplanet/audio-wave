@@ -54,7 +54,7 @@ export default class implements IAudioWaves {
             this.scene.add(new THREE.AxesHelper(20));
         }
 
-        this.camera = new THREE.PerspectiveCamera(45, width / height, .1, 1000);
+        this.camera = new THREE.PerspectiveCamera(45, width / height, .1, 2000);
         this.camera.position.set(0, 50, 430);
         this.camera.lookAt(this.scene.position);
 
