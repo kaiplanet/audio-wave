@@ -28,13 +28,13 @@ toolBar.querySelector(".generate-wave").addEventListener("click", () => {
     const x = +(toolBar.querySelector(".x") as HTMLInputElement).value;
     const y = +(toolBar.querySelector(".y") as HTMLInputElement).value;
 
-    const textureData = new Uint8ClampedArray(61 * 61 * 4).map((value, index) => {
-        if (index % 4 === 3) {
-            const distance = Math.sqrt(Math.pow(Math.abs(Math.floor(index / 4 / 61) - 31), 2)
-                + Math.pow(Math.abs(index / 4 % 61 - 31), 2));
+    const textureData = new Uint8ClampedArray(64 * 64 * 4).map((value, index) => {
+        if (index % 4 === 0) {
+            const distance = Math.sqrt(Math.pow(Math.abs(Math.floor(index / 4 / 64) - 32.5), 2)
+                + Math.pow(Math.abs(index / 4 % 64 - 32.5), 2));
 
             if (distance <= 30) {
-                return 138 + 10 * Math.cos(Math.PI * distance / 30);
+                return 158 + 20 * Math.cos(Math.PI * distance / 30);
             }
 
             return 128;
@@ -43,5 +43,5 @@ toolBar.querySelector(".generate-wave").addEventListener("click", () => {
         return 0;
     });
 
-    audioWaves.generateWave(new ImageData(textureData, 61, 61), { x: 0, y: -.5 });
+    audioWaves.generateWave(new ImageData(textureData, 64, 64), { x: 0, y: -.5 });
 });

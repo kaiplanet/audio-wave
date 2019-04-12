@@ -152,47 +152,34 @@ export default class extends Object {
      *      The range of each component is from -1 to 1.
      */
     public generateWave(sourceTexture: ImageData, position: THREE.Vector2) {
-        const textureUnit = this.bufferRenderer.properties.get(this.getBufferMap()).__webglTexture;
+        const width = sourceTexture.width;
+        const height = sourceTexture.height;
+        const texture = new THREE.DataTexture(Uint8Array.from(sourceTexture.data), width, height);
 
-        if (!textureUnit) {
-            return;
-        }
+        texture.needsUpdate = true;
+        this.bufferMaterial.uniforms.waveSourceMap.value = texture;
 
-        const buffer = new Uint8Array(sourceTexture.width * sourceTexture.height * 4);
+        const matrix = new THREE.Matrix3();
 
-        this.bufferRenderer.readRenderTargetPixels(
-            this.bufferTargets[this.getBufferMapIndex()],
-            TEXTURE_WITDH / 2 + TEXTURE_WITDH / 2 * position.x - sourceTexture.width / 2,
-            TEXTURE_HEIGHT / 2 + TEXTURE_HEIGHT / 2 * position.y - sourceTexture.height / 2,
-            sourceTexture.width,
-            sourceTexture.height,
-            buffer,
+        matrix.set(
+            TEXTURE_WITDH / width, 0, 0,
+            0, TEXTURE_HEIGHT / height, 0,
+            0, 0, 1,
         );
 
-        const texture = new ImageData(Uint8ClampedArray.from(buffer).map((value, index) => {
-            if (index % 4 === 3) {
-                return value + sourceTexture.data[index] - 128;
-            }
+        const translateMatrix = new THREE.Matrix3();
 
-            return value;
-        }), sourceTexture.width, sourceTexture.height);
-
-        const ctx = this.bufferContext;
-        const activeTextureUnit = ctx.getParameter(ctx.TEXTURE_BINDING_2D);
-
-        ctx.bindTexture(ctx.TEXTURE_2D, textureUnit);
-
-        ctx.texSubImage2D(
-            ctx.TEXTURE_2D,
-            0,
-            TEXTURE_WITDH / 2 + TEXTURE_WITDH / 2 * position.x - sourceTexture.width / 2,
-            TEXTURE_HEIGHT / 2 + TEXTURE_HEIGHT / 2 * position.y - sourceTexture.height / 2,
-            ctx.RGBA,
-            ctx.UNSIGNED_BYTE,
-            texture,
+        translateMatrix.set(
+            1, 0, (.5 + .5 * position.x) * (1 - TEXTURE_WITDH / width),
+            0, 1, (.5 + .5 * position.y) * (1 - TEXTURE_HEIGHT / height),
+            0, 0, 1,
         );
 
-        ctx.bindTexture(ctx.TEXTURE_2D, activeTextureUnit);
+        matrix.premultiply(translateMatrix);
+
+        this.bufferMaterial.uniforms.waveSourceMatrix.value = matrix;
+        this.bufferMaterial.uniforms.renderWaveSource.value = true;
+        requestAnimationFrame(() => this.bufferMaterial.uniforms.renderWaveSource.value = false);
     }
 
     // TODO: remove later
@@ -354,6 +341,9 @@ export default class extends Object {
                 k2: {type: "f", value: k2 },
                 k3: { type: "f", value: k3 },
                 obstacleMap: { type: "t", value: null },
+                renderWaveSource: { type: "b", value: false },
+                waveSourceMap: { type: "t", value: null },
+                waveSourceMatrix: { type: "m3", value: new THREE.Matrix3() },
             },
 
             vertexShader: waterNormalMapShaderLib.vertexShader,

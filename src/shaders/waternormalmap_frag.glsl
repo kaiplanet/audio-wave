@@ -5,6 +5,9 @@ uniform float k2;
 uniform float k3;
 uniform float height;
 uniform sampler2D obstacleMap;
+uniform sampler2D waveSourceMap;
+uniform mat3 waveSourceMatrix;
+uniform bool renderWaveSource;
 
 varying vec2 vUv;
 
@@ -44,6 +47,14 @@ void main() {
     float offset = k1 * (sampleTexel[2].a + height) + k2 * (texture2D(bufferMapLast, vUv).a + height) +
         k3 * ((sampleTexel[0].a + height) + (sampleTexel[1].a + height) +
         (sampleTexel[3].a + height) + (sampleTexel[4].a + height));
+
+    if (renderWaveSource) {
+        vec2 uv = (waveSourceMatrix * vec3(vUv, 1.0)).st;
+
+        if (uv.s >= 0.0 && uv.s <= 1.0 && uv.t >= 0.0 && uv.t <= 1.0) {
+            offset += texture2D(waveSourceMap, uv).r - 0.5;
+        }
+    }
 
     vec3 normal = normalize(vec3(sampleTexel[1].a - sampleTexel[3].a, sampleTexel[0].a - sampleTexel[4].a, 2));
 
