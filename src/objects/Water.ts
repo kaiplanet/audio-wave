@@ -20,7 +20,7 @@ const WIDTH = 600;
 const HEIGHT = 600;
 const RESOLUTION = 512;
 const PLANE_NORMAL = new THREE.Vector3(0, 1, 0);
-const FRESNEL_REFLECTION_RATE = .5;
+const FRESNEL_REFLECTION_RATE = .36;
 const DEFAULT_WATER_COLOR = new THREE.Color(0x002c4c);
 
 interface IOptions {
@@ -217,8 +217,10 @@ export default class extends Object {
                 ...waterShaderLib.uniforms,
                 eta: { type: "f", value: eta },
                 map: { type: "t", value: this.mirrorTarget.texture },
+                matrixWorldInverse: { type: "m4", value: new THREE.Matrix4() },
                 normalMap: { type: "t", value: null },
                 textureMatrix: { type: "m4", value: this.mirrorTextureMatrix },
+                vertexDistance: { type: "f", value: Math.max(WIDTH, HEIGHT) / RESOLUTION },
                 waterColor: { type: "c", value: null },
             },
 
@@ -232,6 +234,8 @@ export default class extends Object {
         const plane = new THREE.Mesh(geometry, material);
 
         plane.rotation.set(Math.PI / -2, 0, 0);
+        plane.updateMatrixWorld(false);
+        material.uniforms.matrixWorldInverse.value.getInverse(plane.matrixWorld);
         plane.receiveShadow = true;
 
         plane.onBeforeRender = () => {
@@ -284,7 +288,7 @@ export default class extends Object {
 
         this.bufferTargets = new Array(3)
             .fill(null)
-            .map(() => new THREE.WebGLRenderTarget(TEXTURE_WITDH, TEXTURE_HEIGHT, { format: THREE.RGBAFormat }));
+            .map(() => new THREE.WebGLRenderTarget(TEXTURE_WITDH, TEXTURE_HEIGHT));
 
         this.bufferScene = new THREE.Scene();
 

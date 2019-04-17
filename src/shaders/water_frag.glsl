@@ -43,7 +43,7 @@ varying float fresnelFactor;
 #include <logdepthbuf_pars_fragment>
 #include <clipping_planes_pars_fragment>
 
-const float reflectRate = 0.98;
+const float reflectRate = 0.99;
 
 void main() {
 	#include <clipping_planes_fragment>

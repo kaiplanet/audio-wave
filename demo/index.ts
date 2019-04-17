@@ -25,16 +25,13 @@ toolBar.querySelector(".switch-to-night").addEventListener("click", () => {
 });
 
 toolBar.querySelector(".generate-wave").addEventListener("click", () => {
-    const x = +(toolBar.querySelector(".x") as HTMLInputElement).value;
-    const y = +(toolBar.querySelector(".y") as HTMLInputElement).value;
-
     const textureData = new Uint8ClampedArray(64 * 64 * 4).map((value, index) => {
         if (index % 4 === 0) {
             const distance = Math.sqrt(Math.pow(Math.abs(Math.floor(index / 4 / 64) - 32.5), 2)
                 + Math.pow(Math.abs(index / 4 % 64 - 32.5), 2));
 
             if (distance <= 30) {
-                return 158 + 20 * Math.cos(Math.PI * distance / 30);
+                return 188 + 60 * Math.cos(Math.PI * distance / 60);
             }
 
             return 128;

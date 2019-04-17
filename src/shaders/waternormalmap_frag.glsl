@@ -46,7 +46,7 @@ void main() {
 
     float offset = k1 * (sampleTexel[2].a + height) + k2 * (texture2D(bufferMapLast, vUv).a + height) +
         k3 * ((sampleTexel[0].a + height) + (sampleTexel[1].a + height) +
-        (sampleTexel[3].a + height) + (sampleTexel[4].a + height));
+        (sampleTexel[3].a + height) + (sampleTexel[4].a + height)) - height;
 
     if (renderWaveSource) {
         vec2 uv = (waveSourceMatrix * vec3(vUv, 1.0)).st;
@@ -58,5 +58,5 @@ void main() {
 
     vec3 normal = normalize(vec3(sampleTexel[1].a - sampleTexel[3].a, sampleTexel[0].a - sampleTexel[4].a, 2));
 
-    gl_FragColor = vec4(normal, offset - height);
+    gl_FragColor = vec4(((normal * 0.5) + 0.5) * offset, offset);
 }

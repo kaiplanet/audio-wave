@@ -4,6 +4,8 @@
 uniform sampler2D normalMap;
 uniform mat4 textureMatrix;
 uniform float eta;
+uniform mat4 matrixWorldInverse;
+uniform float vertexDistance;
 
 varying vec3 vLightFront;
 
@@ -37,26 +39,18 @@ varying float fresnelFactor;
 #include <logdepthbuf_pars_vertex>
 #include <clipping_planes_pars_vertex>
 
-const float sceneHeight = 600.0;
+const float sceneHeight = 300.0;
 
 void main() {
 //	#include <uv_vertex>
 	#include <uv2_vertex>
 	#include <color_vertex>
 
-	vec3 objectNormal = normalize(texture2D(normalMap, uv).xyz);
+    vec4 normalMapTexel = texture2D(normalMap, uv);
+	vec3 objectNormal = (normalMapTexel.xyz - 0.5) / 0.5;
 
     vUv = textureMatrix * vec4(position, 1.0)
-        + vec4(objectNormal.x  / objectNormal.z * sceneHeight, objectNormal.y / objectNormal.z * sceneHeight, 0.0, 0.0);
-
-    vec3 incidentLightDirection = reflect(position - cameraPosition, objectNormal);
-    float texDotNL = dot(normalize(incidentLightDirection), objectNormal);
-    float g = sqrt(pow(eta, 2.0) - 1.0 + pow(texDotNL, 2.0));
-    float f1 = g - texDotNL;
-    float f2 = g + texDotNL;
-
-    fresnelFactor = 0.5 * pow(f1, 2.0) / pow(f2, 2.0)
-        * (pow(texDotNL * f2 - 1.0, 2.0) / pow(texDotNL * f1 + 1.0, 2.0) + 1.0);
+        + vec4(objectNormal.x, objectNormal.y, 0.0, 0.0) / objectNormal.z * sceneHeight;
 
 //	#include <beginnormal_vertex>
 	#include <morphnormal_vertex>
@@ -64,7 +58,23 @@ void main() {
 	#include <skinnormal_vertex>
 	#include <defaultnormal_vertex>
 
-	#include <begin_vertex>
+//	#include <begin_vertex>
+
+    vec3 transformed = vec3(position.xy, vertexDistance * normalMapTexel.w);
+
+    float texDotNL = dot(normalize((matrixWorldInverse * vec4(cameraPosition, 1.0)).xyz - transformed), objectNormal);
+
+    if (texDotNL < 0.0) {
+        texDotNL = 0.0;
+    }
+
+    float g = sqrt(pow(eta, 2.0) - 1.0 + pow(texDotNL, 2.0));
+    float f1 = g - texDotNL;
+    float f2 = g + texDotNL;
+
+    fresnelFactor = 0.5 * pow(f1, 2.0) / pow(f2, 2.0)
+        * (pow(texDotNL * f2 - 1.0, 2.0) / pow(texDotNL * f1 + 1.0, 2.0) + 1.0);
+
 	#include <morphtarget_vertex>
 	#include <skinning_vertex>
 	#include <project_vertex>
