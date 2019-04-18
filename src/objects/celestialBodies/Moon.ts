@@ -10,7 +10,7 @@ export default class Moon extends CelestialBody {
     constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3, options) {
         super(position, risePosition, setPosition, options);
 
-        this.init(options);
+        this.init();
     }
 
     protected loadTexture() {
@@ -47,8 +47,8 @@ export default class Moon extends CelestialBody {
         this.loadImageTexture();
     }
 
-    protected init({ intensity }) {
-        const light = new THREE.DirectionalLight(0xe6f5ff, intensity);
+    protected init() {
+        const light = new THREE.DirectionalLight(0xe6f5ff, this.intensity);
 
         light.castShadow = true;
         light.shadow.camera.near = 0.5;
@@ -57,10 +57,9 @@ export default class Moon extends CelestialBody {
         light.shadow.camera.right = 500;
         light.shadow.camera.top = 500;
         light.shadow.camera.bottom = -500;
+        this.light = light;
 
-        super.init(light);
-
-        return this;
+        super.init();
     }
 
     private async loadImageTexture() {
@@ -71,7 +70,7 @@ export default class Moon extends CelestialBody {
         const imageOffsetX = imageData.width - imageResolution;
         const imageOffsetY = imageData.height - imageResolution;
         const radianceStart = imageResolution * (.5 - .2);
-        const radanceEnd = resolution * .5 - radianceStart;
+        const radianceEnd = resolution * .5 - radianceStart;
         const ease = Sine.easeOut;
 
         const textureData = new Uint8Array(resolution * resolution * 4).map((value, index) => {
@@ -84,7 +83,7 @@ export default class Moon extends CelestialBody {
 
             if (distance > radianceStart) {
                 const radianceComponent = (() => {
-                    switch (index % 4) {
+                    switch (componentIndex) {
                         case 0:
                             return 230;
                         case 1:
@@ -92,7 +91,7 @@ export default class Moon extends CelestialBody {
                         case 2:
                             return 255;
                         case 3:
-                            return (1 - ease.getRatio(Math.min((distance - radianceStart) / radanceEnd, 1))) * 255;
+                            return (1 - ease.getRatio(Math.min((distance - radianceStart) / radianceEnd, 1))) * 255;
                         default:
                             return 0;
                     }
@@ -105,7 +104,7 @@ export default class Moon extends CelestialBody {
                 const texelAlpha = imageData.data[imagePixelIndex * 4 + 3] / 255;
 
                 if (componentIndex === 3) {
-                    const radianceAlpha = 1 - ease.getRatio(Math.min((distance - radianceStart) / radanceEnd, 1));
+                    const radianceAlpha = 1 - ease.getRatio(Math.min((distance - radianceStart) / radianceEnd, 1));
 
                     return Math.floor((1 - (1 - radianceAlpha) * (1 - texelAlpha)) * 255);
                 }

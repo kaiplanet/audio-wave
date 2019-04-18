@@ -54,7 +54,7 @@ export default class implements IAudioWaves {
             this.scene.add(new THREE.AxesHelper(20));
         }
 
-        this.camera = new THREE.PerspectiveCamera(45, width / height, .1, 1000);
+        this.camera = new THREE.PerspectiveCamera(45, width / height, .1, 2000);
         this.camera.position.set(0, 50, 430);
         this.camera.lookAt(this.scene.position);
 
@@ -63,7 +63,6 @@ export default class implements IAudioWaves {
 
         this.background = new Background(this.renderer);
         this.background.alpha = 0;
-        this.background.brightness = .05;
         this.background.addTo(this.scene);
         this.background.load();
 
@@ -138,7 +137,7 @@ export default class implements IAudioWaves {
     }
 
     public switchToDay() {
-        animate(this.background, { alpha: 1, brightness: 1 }, 2, { delay: 1, ease: Power1.easeOut });
+        animate(this.background, { alpha: 1 }, 2, { delay: 1, ease: Power1.easeOut });
         this.sun.rise(2, 1);
         animate(this.hemisphereLight, { intensity: DAY_BRIGHTNESS }, 2, { delay: 1, ease: Power1.easeOut });
         animate(this.water, { brightness: DAY_BRIGHTNESS }, 2, { delay: 1, ease: Power1.easeOut });
@@ -151,7 +150,7 @@ export default class implements IAudioWaves {
     }
 
     public switchToNight() {
-        animate(this.background, { alpha: 0, brightness: .05 }, 2, { ease: Power1.easeOut });
+        animate(this.background, { alpha: 0 }, 2, { ease: Power1.easeOut });
         this.sun.set(2, 0);
         animate(this.hemisphereLight, { intensity: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeOut });
         animate(this.water, { brightness: NIGHT_BRIGHTNESS }, 2, { ease: Power1.easeOut });

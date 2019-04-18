@@ -23,6 +23,8 @@ const PLANE_NORMAL = new THREE.Vector3(0, 1, 0);
 const FRESNEL_REFLECTION_RATE = .36;
 const DEFAULT_WATER_COLOR = new THREE.Color(0x002c4c);
 
+let updateMirrorTextureSetting: (event: Event) => void;
+
 interface IOptions {
     color?: THREE.Color;
     brightness?: number;
@@ -46,7 +48,6 @@ export default class extends Object {
     private mirrorTarget: THREE.WebGLRenderTarget;
     private mirrorCamera: THREE.Camera;
     private privateBrightness: number;
-    private readonly reflectMatrix: THREE.Matrix4;
     private readonly mirrorTextureMatrix: THREE.Matrix4;
 
     public get brightness() {
@@ -62,7 +63,6 @@ export default class extends Object {
         super();
 
         this.color = color;
-        this.reflectMatrix = new THREE.Matrix4();
         this.mirrorTextureMatrix = new THREE.Matrix4();
         this.init(renderer, { brightness });
     }
@@ -74,13 +74,38 @@ export default class extends Object {
 
         const distanceToOrigin = position.y;
         const n = PLANE_NORMAL;
+        const reflectMatrix = new THREE.Matrix4();
 
-        this.reflectMatrix.set(
+        reflectMatrix.set(
             1 - 2 * n.x * n.x, -2 * n.x * n.y, -2 * n.x * n.z, -2 * distanceToOrigin * n.x,
             -2 * n.x * n.y, 1 - 2 * n.y * n.y, -2 * n.y * n.z, -2 * distanceToOrigin * n.y,
             -2 * n.x * n.z, -2 * n.y * n.z, 1 - 2 * n.z * n.z, -2 * distanceToOrigin * n.z,
             0, 0, 0, 1,
         );
+
+        if (updateMirrorTextureSetting) {
+            this.camera.removeEventListener("move", updateMirrorTextureSetting);
+        }
+
+        updateMirrorTextureSetting = () => {
+            this.mirrorCamera.matrix = this.camera.matrix.clone();
+            this.mirrorCamera.applyMatrix(reflectMatrix);
+            this.mirrorCamera.dispatchEvent({ type: "move" });
+
+            // Update the texture matrix
+            this.mirrorTextureMatrix.set(
+                0.5, 0.0, 0.0, 0.5,
+                0.0, 0.5, 0.0, 0.5,
+                0.0, 0.0, 0.5, 0.5,
+                0.0, 0.0, 0.0, 1.0,
+            );
+
+            this.mirrorTextureMatrix.multiply(this.mirrorCamera.projectionMatrix);
+            this.mirrorTextureMatrix.multiply(this.mirrorCamera.matrixWorldInverse);
+            this.mirrorTextureMatrix.multiply(this.plane.matrixWorld);
+        };
+
+        this.camera.addEventListener("move", updateMirrorTextureSetting);
 
         return super.addTo(scene, position);
     }
@@ -203,8 +228,6 @@ export default class extends Object {
         this.brightness = brightness;
         this.initBufferScene();
         this.planeMaterial.uniforms.normalMap.value = new THREE.CanvasTexture(this.bufferRenderer.domElement);
-
-        return this;
     }
 
     private createPlane(): THREE.Mesh {
@@ -241,20 +264,6 @@ export default class extends Object {
         plane.onBeforeRender = () => {
             if (this.mirrorScene && this.mirrorCamera && this.mirrorTarget) {
                 plane.visible = false;
-                this.mirrorCamera.matrix = this.camera.matrix.clone();
-                this.mirrorCamera.applyMatrix(this.reflectMatrix);
-
-                // Update the texture matrix
-                this.mirrorTextureMatrix.set(
-                    0.5, 0.0, 0.0, 0.5,
-                    0.0, 0.5, 0.0, 0.5,
-                    0.0, 0.0, 0.5, 0.5,
-                    0.0, 0.0, 0.0, 1.0,
-                );
-
-                this.mirrorTextureMatrix.multiply(this.mirrorCamera.projectionMatrix);
-                this.mirrorTextureMatrix.multiply(this.mirrorCamera.matrixWorldInverse);
-                this.mirrorTextureMatrix.multiply(this.plane.matrixWorld);
 
                 const currentRenderTarget = this.renderer.getRenderTarget();
                 const currentVrEnabled = this.renderer.vr.enabled;
@@ -263,7 +272,9 @@ export default class extends Object {
                 this.renderer.vr.enabled = false; // Avoid camera modification and recursion
                 this.renderer.shadowMap.autoUpdate = false; // Avoid re-computing shadows
 
+                this.mirrorScene.dispatchEvent({ type: "beforeRender", currentTarget: this.mirrorCamera});
                 this.renderer.render(this.mirrorScene, this.mirrorCamera, this.mirrorTarget, true);
+                this.mirrorScene.dispatchEvent({ type: "beforeRender", currentTarget: this.camera });
 
                 this.renderer.vr.enabled = currentVrEnabled;
                 this.renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;

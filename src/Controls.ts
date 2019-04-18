@@ -92,6 +92,7 @@ export default class implements IControls {
                     onUpdate: () => {
                         cameraPosition.set(target.x, target.y, target.z);
                         this.camera.lookAt(this.lookAt);
+                        this.camera.dispatchEvent({ type: "move" });
                     },
                 });
             }
@@ -132,6 +133,7 @@ export default class implements IControls {
                     onUpdate: () => {
                         cameraPosition.set(target.x, target.y, target.z);
                         this.camera.lookAt(this.lookAt);
+                        this.camera.dispatchEvent({ type: "move" });
                     },
                 });
             }
@@ -172,6 +174,7 @@ export default class implements IControls {
 
             cameraOffset.multiplyScalar(Math.pow(zoomRatio, e.deltaY));
             cameraPosition.addVectors(this.lookAt, cameraOffset);
+            this.camera.dispatchEvent({ type: "move" });
             cameraDistance = cameraPosition.distanceTo(this.lookAt);
         };
 

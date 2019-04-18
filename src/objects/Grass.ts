@@ -80,7 +80,5 @@ export default class extends Object {
         if (this.scene && this.position) {
             super.addTo(this.scene, this.position);
         }
-
-        return this;
     }
 }

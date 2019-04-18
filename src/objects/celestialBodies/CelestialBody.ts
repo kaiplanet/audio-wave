@@ -50,6 +50,7 @@ export default abstract class CelestialBody extends Object implements ICelestial
     protected riseDirection: THREE.Vector3;
     protected downDirection: THREE.Vector3;
     protected background: Background;
+    protected scene: THREE.Scene;
 
     public set opacity(opacity) {
         this.sprite.material.opacity = opacity;
@@ -63,8 +64,9 @@ export default abstract class CelestialBody extends Object implements ICelestial
         return this.sprite.material.opacity;
     }
 
-    protected constructor(position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3,
-                          { intensity = 1 }: IOptions = {}) {
+    protected constructor(
+        position: THREE.Vector3, risePosition: THREE.Vector3, setPosition: THREE.Vector3,
+        { intensity = 1 }: IOptions = {}) {
         super();
 
         this.originDirection = position.clone().normalize();
@@ -74,14 +76,14 @@ export default abstract class CelestialBody extends Object implements ICelestial
     }
 
     public setDirection(direction) {
-        const normalizedDirection = direction.clone().normalize();
+        direction.normalize();
 
         if (this.light) {
-            this.light.position.set(normalizedDirection.x, normalizedDirection.y, normalizedDirection.z);
+            this.light.position.copy(direction);
         }
 
         if (this.sprite) {
-            this.sprite.position.set(normalizedDirection.x, normalizedDirection.y, normalizedDirection.z);
+            this.sprite.position.copy(direction).multiplyScalar(CelestialBody.spriteDistance);
         }
 
         return this;
@@ -139,6 +141,8 @@ export default abstract class CelestialBody extends Object implements ICelestial
             scene.add(new THREE.DirectionalLightHelper(this.light));
         }
 
+        this.scene = scene;
+
         return this;
     }
 
@@ -149,30 +153,28 @@ export default abstract class CelestialBody extends Object implements ICelestial
         return this;
     }
 
-    protected abstract loadTexture();
+    protected abstract loadTexture(): void;
 
-    protected init(light: THREE.Light) {
-        light.position.set(this.originDirection.x, this.originDirection.y, this.originDirection.z);
-        light.intensity = this.intensity;
-        this.light = light;
-        this.objects.push(light);
+    protected init(): void {
+        this.light.position.set(this.originDirection.x, this.originDirection.y, this.originDirection.z);
+        this.light.intensity = this.intensity;
+        this.objects.push(this.light);
 
         this.initSprite();
         this.loadTexture();
 
-        return this;
+        this.setDirection(this.originDirection.clone());
     }
 
-    protected initSprite() {
+    protected initSprite(): void {
         const material = new THREE.SpriteMaterial({ map: null });
 
-        (material as any).sizeAttenuation = false;
+        if (Reflect.has(material, "sizeAttenuation")) {
+            (material as any).sizeAttenuation = false;
+        }
+
         this.spriteMaterial = material;
         this.sprite = new THREE.Sprite(material);
-
-        const position = this.originDirection.clone().normalize().multiplyScalar(CelestialBody.spriteDistance);
-
         this.sprite.scale.set(.1, .1, 1);
-        this.sprite.position.set(position.x, position.y, position.z);
     }
 }
