@@ -9,7 +9,6 @@ import { backgroundShaderLib } from "../shaders/ShaderLib";
 
 interface IOptions {
     alpha?: number;
-    brightness?: number;
 }
 
 export default class extends Object {
@@ -23,18 +22,6 @@ export default class extends Object {
         if (this.cube.material instanceof Array) {
             this.cube.material.forEach((material: THREE.ShaderMaterial) => {
                 material.uniforms.alpha.value = alpha;
-            });
-        }
-    }
-
-    public get brightness() {
-        return this.cube.material[0].uniforms.brightness.value;
-    }
-
-    public set brightness(brightness: number) {
-        if (this.cube.material instanceof Array) {
-            this.cube.material.forEach((material) => {
-                (material as any).uniforms.brightness.value = brightness;
             });
         }
     }
@@ -85,7 +72,7 @@ export default class extends Object {
         this.camera.update(this.renderer, this.scene);
     }
 
-    protected init(renderer: THREE.WebGLRenderer, { alpha = 1, brightness = 1 }: IOptions) {
+    protected init(renderer: THREE.WebGLRenderer, { alpha = 1 }: IOptions) {
         this.renderer = renderer;
         this.scene = new THREE.Scene();
 
@@ -98,7 +85,6 @@ export default class extends Object {
             uniforms: {
                 ...backgroundShaderLib.uniforms,
                 alpha: { type: "f", value: alpha },
-                brightness: { type: "f", value: brightness },
                 map0: { type: "t", value: null },
                 map1: { type: "t", value: null },
             },

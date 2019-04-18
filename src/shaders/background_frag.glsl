@@ -3,7 +3,6 @@
 uniform vec3 diffuse;
 uniform float opacity;
 uniform float alpha;
-uniform float brightness;
 
 #ifndef FLAT_SHADED
 
@@ -69,7 +68,7 @@ void main() {
 
 	#include <envmap_fragment>
 
-	gl_FragColor = vec4(outgoingLight, diffuseColor.a) * brightness;
+	gl_FragColor = vec4(outgoingLight, diffuseColor.a);
 
 	#include <premultiplied_alpha_fragment>
 	#include <tonemapping_fragment>
