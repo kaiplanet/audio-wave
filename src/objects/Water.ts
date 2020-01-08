@@ -23,7 +23,7 @@ const PLANE_NORMAL = new THREE.Vector3(0, 1, 0);
 const FRESNEL_REFLECTION_RATE = .36;
 const DEFAULT_WATER_COLOR = new THREE.Color(0x002c4c);
 
-let updateMirrorTextureSetting: (event: Event) => void;
+let updateMirrorTextureSetting: (event?: Event) => void;
 
 interface IOptions {
     color?: THREE.Color;
@@ -114,6 +114,8 @@ export default class extends Object {
         if (this.active) {
             return;
         }
+
+        updateMirrorTextureSetting();
 
         const waveSimulationTick = (clockDelta) => {
             const MAX_DELTA = 1 / 60;

@@ -92,6 +92,7 @@ export default class implements IControls {
                     onUpdate: () => {
                         cameraPosition.set(target.x, target.y, target.z);
                         this.camera.lookAt(this.lookAt);
+                        this.camera.updateMatrix();
                         this.camera.dispatchEvent({ type: "move" });
                     },
                 });
@@ -133,6 +134,7 @@ export default class implements IControls {
                     onUpdate: () => {
                         cameraPosition.set(target.x, target.y, target.z);
                         this.camera.lookAt(this.lookAt);
+                        this.camera.updateMatrix();
                         this.camera.dispatchEvent({ type: "move" });
                     },
                 });

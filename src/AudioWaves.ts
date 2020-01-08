@@ -61,18 +61,18 @@ export default class implements IAudioWaves {
         this.hemisphereLight = new THREE.HemisphereLight(0xfff2e4, 0x080820, .2);
         this.scene.add(this.hemisphereLight);
 
-        this.background = new Background(this.renderer);
-        this.background.alpha = 0;
-        this.background.addTo(this.scene);
-        this.background.load();
-
         this.sun = new Sun(SUN_DIRECTION, SUN_RISE_DIRECTION, SUN_SET_DIRECTION, { intensity: SUN_INTENSITY });
         this.sun.setDirection(SUN_RISE_DIRECTION);
         this.sun.opacity = 0;
         this.sun.addTo(this.scene);
-        this.sun.setBackground(this.background);
         this.moon = new Moon(MOON_DIRECTION, MOON_RISE_DIRECTION, MOON_SET_DIRECTION, { intensity: MOON_INTENSITY });
         this.moon.addTo(this.scene);
+
+        this.background = new Background(this.renderer);
+        this.background.alpha = 0;
+        this.background.addTo(this.scene);
+        this.background.load();
+        this.sun.setBackground(this.background);
         this.moon.setBackground(this.background);
         this.background.update();
 
@@ -108,7 +108,6 @@ export default class implements IAudioWaves {
         }
 
         this.active = true;
-        this.water.startSimulation();
 
         const render = () => {
             if (this.active) {
@@ -118,7 +117,10 @@ export default class implements IAudioWaves {
             this.renderer.render(this.scene, this.camera);
         };
 
-        requestAnimationFrame(render);
+        requestAnimationFrame(() => {
+            render();
+            this.water.startSimulation();
+        });
 
         return this;
     }
