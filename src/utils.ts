@@ -146,4 +146,26 @@ async function loadDDSTexture(path: string): Promise<THREE.CompressedTexture> {
     });
 }
 
-export { animate, loadTexture, loadImageData, loadOBJMTLModel, loadDDSTexture };
+function cleanUpRendererContext(renderer: THREE.WebGLRenderer) {
+    const currentRenderTarget = renderer.getRenderTarget();
+    const currentVrEnalbed = renderer.vr.enabled;
+    const currentShadowMapAutoUpdate = renderer.shadowMap.autoUpdate;
+
+    renderer.vr.enabled = false; // Avoid camera modification and recursion
+    renderer.shadowMap.autoUpdate = false; // Avoid re-computing shadows
+
+    return {
+        renderTarget: currentRenderTarget,
+        shadowMapAutoUpdate: currentShadowMapAutoUpdate,
+        vrEnabled: currentVrEnalbed,
+    };
+}
+
+function restoreRendererContext(renderer: THREE.WebGLRenderer, { renderTarget, vrEnabled, shadowMapAutoUpdate }) {
+    renderer.setRenderTarget(renderTarget);
+    renderer.vr.enabled = vrEnabled;
+    renderer.shadowMap.autoUpdate = shadowMapAutoUpdate;
+}
+
+export { animate, loadTexture, loadImageData, loadOBJMTLModel, loadDDSTexture, cleanUpRendererContext,
+    restoreRendererContext };

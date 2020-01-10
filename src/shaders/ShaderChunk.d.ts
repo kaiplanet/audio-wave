@@ -1,5 +1,13 @@
+export const simplexnoise3d: string;
+
 export const background_frag: string;
 export const background_vert: string;
+export const cloud_frag: string;
+export const cloud_vert: string;
+export const cloudsimulation_frag: string;
+export const cloudsimulation_vert: string;
+export const cloudinit_frag: string;
+export const cloudinit_vert: string;
 export const grass_frag: string;
 export const grass_vert: string;
 export const meanfilter_frag: string;

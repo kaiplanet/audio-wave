@@ -5,6 +5,7 @@ import Controls from "./Controls";
 import Background from "./objects/Background";
 import Moon from "./objects/celestialBodies/Moon";
 import Sun from "./objects/celestialBodies/Sun";
+import Cloud from "./objects/Cloud";
 import Grass from "./objects/Grass";
 import Water from "./objects/Water";
 
@@ -19,7 +20,8 @@ const SUN_INTENSITY = 3;
 const MOON_DIRECTION = new THREE.Vector3(0, 1, -8);
 const MOON_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
 const MOON_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
-const MOON_INTENSITY = .8;
+const MOON_INTENSITY = 1.5;
+const CLOUD_DIRECTIONS = [new THREE.Vector3(-1, .6, -8)];
 
 interface IAudioWaves {
     init(width: number, height: number): Promise<this>;
@@ -36,6 +38,7 @@ export default class implements IAudioWaves {
     private scene: THREE.Scene;
     private camera: THREE.PerspectiveCamera;
     private water: Water;
+    private clouds: Cloud[];
     private background: Background;
     private sun: Sun;
     private moon: Moon;
@@ -83,6 +86,15 @@ export default class implements IAudioWaves {
 
         grass.addTo(this.scene, new THREE.Vector3(60, 0, 250));
 
+        this.clouds = CLOUD_DIRECTIONS.map((cloudDirection) => {
+            const cloud = new Cloud(this.renderer);
+
+            cloud.lights = this.scene.children.filter((o) => o instanceof THREE.Light) as THREE.Light[];
+            cloud.addTo(this.background.scene, cloudDirection.normalize());
+
+            return cloud;
+        });
+
         const controls = new Controls({ rotateSpeed: .03, zoomSpeed: .01 });
 
         controls.connect(this.camera);
@@ -95,11 +107,6 @@ export default class implements IAudioWaves {
         mountPoint.appendChild(this.renderer.domElement);
 
         return mountPoint;
-    }
-
-    // TODO: remove later
-    public mountWaterTexture(mountPoint: HTMLElement) {
-        return this.water.mountTexture(mountPoint);
     }
 
     public start() {
@@ -120,6 +127,10 @@ export default class implements IAudioWaves {
         requestAnimationFrame(() => {
             render();
             this.water.startSimulation();
+
+            this.clouds.forEach((cloud) => {
+                cloud.startSimulation();
+            });
         });
 
         return this;

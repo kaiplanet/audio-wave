@@ -58,5 +58,5 @@ void main() {
 
     vec3 normal = normalize(vec3(sampleTexel[1].a - sampleTexel[3].a, sampleTexel[0].a - sampleTexel[4].a, 2));
 
-    gl_FragColor = vec4(((normal * 0.5) + 0.5) * offset, offset);
+    gl_FragColor = vec4((normal * 0.5) + 0.5, offset);
 }

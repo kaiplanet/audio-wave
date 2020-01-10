@@ -20,5 +20,6 @@ export default abstract class {
     public abstract startSimulation(): this;
     public abstract stopSimulation(): this;
 
-    protected abstract init(...params: any): void|Promise<void>;
+    // Move this logic into constructor.
+    // protected abstract init(...params: any): void|Promise<void>;
 }

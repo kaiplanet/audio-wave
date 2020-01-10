@@ -3,7 +3,8 @@ import * as THREE from "three";
 import { UniformsLib } from "three/src/renderers/shaders/UniformsLib";
 import { UniformsUtils } from "three/src/renderers/shaders/UniformsUtils";
 
-import { background_frag, background_vert, grass_frag, grass_vert, meanfilter_frag, meanfilter_vert, water_frag,
+import { background_frag, background_vert, cloud_frag, cloud_vert, cloudinit_frag, cloudinit_vert, cloudsimulation_frag,
+    cloudsimulation_vert, grass_frag, grass_vert, meanfilter_frag, meanfilter_vert, simplexnoise3d, water_frag,
     water_vert, waterbumpmap_frag, waterbumpmap_vert, waternormalmap_frag, waternormalmap_vert } from "./ShaderChunk";
 
 interface IShaderLib {
@@ -39,6 +40,30 @@ const waterNormalMapShaderLib: IShaderLib = {
   vertexShader: waternormalmap_vert,
 
   fragmentShader: waternormalmap_frag,
+};
+
+const cloudShaderLib: IShaderLib = {
+    uniforms: { },
+
+    vertexShader: cloud_vert,
+
+    fragmentShader: cloud_frag,
+};
+
+const cloudSimulationShaderLib: IShaderLib = {
+    uniforms: { },
+
+    vertexShader: cloudsimulation_vert,
+
+    fragmentShader: cloudsimulation_frag,
+};
+
+const cloudInitShaderLib: IShaderLib = {
+    uniforms: { },
+
+    vertexShader: cloudinit_vert,
+
+    fragmentShader: simplexnoise3d + cloudinit_frag,
 };
 
 const backgroundShaderLib: IShaderLib = {
@@ -100,5 +125,5 @@ const meanFilterShaderLib: IShaderLib = {
     fragmentShader: meanfilter_frag,
 };
 
-export { backgroundShaderLib, grassShaderLib, meanFilterShaderLib, waterBumpMapShaderLib, waterNormalMapShaderLib,
-    waterShaderLib };
+export { backgroundShaderLib, cloudShaderLib, cloudSimulationShaderLib, cloudInitShaderLib, grassShaderLib,
+    meanFilterShaderLib, waterBumpMapShaderLib, waterNormalMapShaderLib, waterShaderLib };

@@ -1,13 +1,14 @@
 import { Power1 } from "gsap/all";
 import * as THREE from "three";
 
-import Background from "../Background";
-import Object from "../Object";
+import Background from "./Background";
+import Object from "./Object";
 
-import { animate } from "../../utils";
+import { animate } from "../utils";
 
 const SPRITE_DISTANCE = 1;
 const TEXTURE_RESOLUTION = 256;
+const INTENSITY_VARY_RANGE_RATIO = .3;
 
 const getRotationAxis = (a: THREE.Vector3, b: THREE.Vector3): THREE.Vector3 => {
     const crosssProduct =  a.clone().cross(b);
@@ -42,7 +43,18 @@ interface IOptions {
 export default abstract class CelestialBody extends Object implements ICelestialBody {
     protected static textureResolution = TEXTURE_RESOLUTION;
     private static spriteDistance = SPRITE_DISTANCE;
-    protected intensity: number;
+    private static intensityRangeRatio = INTENSITY_VARY_RANGE_RATIO;
+
+    protected set intensity(intensity: number) {
+        this.privateIntensity = intensity;
+        this.intensityRange = intensity - intensity * CelestialBody.intensityRangeRatio;
+        this.intensityMin = intensity - this.intensityRange;
+    }
+
+    protected get intensity() {
+        return this.privateIntensity;
+    }
+
     protected sprite: THREE.Sprite;
     protected spriteMaterial: THREE.SpriteMaterial;
     protected light: THREE.Light;
@@ -51,12 +63,21 @@ export default abstract class CelestialBody extends Object implements ICelestial
     protected downDirection: THREE.Vector3;
     protected background: Background;
     protected scene: THREE.Scene;
+    protected intensityMin: number;
+    protected intensityRange: number;
+    private privateIntensity: number;
 
     public set opacity(opacity) {
         this.sprite.material.opacity = opacity;
 
         if (this.light) {
-            this.light.intensity = this.intensity * opacity;
+            if (opacity <= 0) {
+                this.light.intensity = 0;
+
+                return;
+            }
+
+            this.light.intensity = this.intensityMin + this.intensityRange * opacity;
         }
     }
 

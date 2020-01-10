@@ -1,7 +1,7 @@
 import { Sine } from "gsap/all";
 import * as THREE from "three";
 
-import CelestialBody from "./CelestialBody";
+import CelestialBody from "../CelestialBody";
 
 import { MOON } from "../../assets/assets";
 import { loadImageData } from "../../utils";

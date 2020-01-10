@@ -5,15 +5,15 @@ import Object from "./Object";
 import { WATER_OBSTACLE_MAP } from "../assets/assets";
 import { waterNormalMapShaderLib, waterShaderLib } from "../shaders/ShaderLib";
 
-import { loadTexture } from "../utils";
+import { cleanUpRendererContext, loadTexture, restoreRendererContext } from "../utils";
 
 const WAVE_SPEED = 60 * .637731533050537209295072216; // Pixel per millisecond.
 const RESISTANCE_FACTOR = 0.01;
 const BOTTOM_HEIGHT = 6000;
 
-const TEXTURE_WITDH = 512;
+const TEXTURE_WIDTH = 512;
 const TEXTURE_HEIGHT = 512;
-const EXTERNAL_COORDS_ORIGIN_X = TEXTURE_WITDH / 2;
+const EXTERNAL_COORDS_ORIGIN_X = TEXTURE_WIDTH / 2;
 const EXTERNAL_COORDS_ORIGIN_Y = TEXTURE_HEIGHT / 2;
 
 const WIDTH = 600;
@@ -40,7 +40,6 @@ export default class extends Object {
     private bufferTargets: THREE.WebGLRenderTarget[];
     private activeBufferTargetIndex: number;
     private bufferContext: WebGLRenderingContext;
-    private bufferRenderer: THREE.WebGLRenderer;
     private bufferScene: THREE.Scene;
     private bufferSceneCamera: THREE.Camera;
     private bufferMaterial: THREE.ShaderMaterial;
@@ -115,11 +114,11 @@ export default class extends Object {
             return;
         }
 
+        const MAX_DELTA = 1 / 60;
+
         updateMirrorTextureSetting();
 
         const waveSimulationTick = (clockDelta) => {
-            const MAX_DELTA = 1 / 60;
-
             // const delta = clockDelta > MAX_DELTA ? MAX_DELTA : clockDelta;
             const delta = MAX_DELTA;
 
@@ -135,15 +134,11 @@ export default class extends Object {
             this.bufferMaterial.uniforms.bufferMap.value = this.getBufferMap();
             this.bufferMaterial.uniforms.bufferMapLast.value = this.getBufferMapLast();
 
-            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, this.getActiveBufferTarget());
+            const rendererContext = cleanUpRendererContext(this.renderer);
 
-            // TODO: Currently need canvas to pass texture between scenes,
-            // remove from product env when better method found.
-            // if (process.env.NODE_ENV === "development") {
-            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera);
-            // }
-
-            this.planeMaterial.uniforms.normalMap.value.needsUpdate = true;
+            this.renderer.render(this.bufferScene, this.bufferSceneCamera, this.getActiveBufferTarget());
+            restoreRendererContext(this.renderer, rendererContext);
+            this.planeMaterial.uniforms.normalMap.value = this.getActiveBufferTarget().texture;
             this.swapActiveBufferTargets();
         };
 
@@ -189,7 +184,7 @@ export default class extends Object {
         const matrix = new THREE.Matrix3();
 
         matrix.set(
-            TEXTURE_WITDH / width, 0, 0,
+            TEXTURE_WIDTH / width, 0, 0,
             0, TEXTURE_HEIGHT / height, 0,
             0, 0, 1,
         );
@@ -197,7 +192,7 @@ export default class extends Object {
         const translateMatrix = new THREE.Matrix3();
 
         translateMatrix.set(
-            1, 0, (.5 + .5 * position.x) * (1 - TEXTURE_WITDH / width),
+            1, 0, (.5 + .5 * position.x) * (1 - TEXTURE_WIDTH / width),
             0, 1, (.5 + .5 * position.y) * (1 - TEXTURE_HEIGHT / height),
             0, 0, 1,
         );
@@ -207,13 +202,6 @@ export default class extends Object {
         this.bufferMaterial.uniforms.waveSourceMatrix.value = matrix;
         this.bufferMaterial.uniforms.renderWaveSource.value = true;
         requestAnimationFrame(() => this.bufferMaterial.uniforms.renderWaveSource.value = false);
-    }
-
-    // TODO: remove later
-    public mountTexture(mountPoint: HTMLElement) {
-        mountPoint.appendChild(this.bufferRenderer.domElement);
-
-        return mountPoint;
     }
 
     protected init(renderer: THREE.WebGLRenderer, { brightness }: { brightness: number }) {
@@ -229,7 +217,7 @@ export default class extends Object {
         this.createPlane();
         this.brightness = brightness;
         this.initBufferScene();
-        this.planeMaterial.uniforms.normalMap.value = new THREE.CanvasTexture(this.bufferRenderer.domElement);
+        this.planeMaterial.uniforms.normalMap.value = this.getActiveBufferTarget().texture;
     }
 
     private createPlane(): THREE.Mesh {
@@ -267,21 +255,12 @@ export default class extends Object {
             if (this.mirrorScene && this.mirrorCamera && this.mirrorTarget) {
                 plane.visible = false;
 
-                const currentRenderTarget = this.renderer.getRenderTarget();
-                const currentVrEnabled = this.renderer.vr.enabled;
-                const currentShadowAutoUpdate = this.renderer.shadowMap.autoUpdate;
-
-                this.renderer.vr.enabled = false; // Avoid camera modification and recursion
-                this.renderer.shadowMap.autoUpdate = false; // Avoid re-computing shadows
+                const rendererContext = cleanUpRendererContext(this.renderer);
 
                 this.mirrorScene.dispatchEvent({ type: "beforeRender", currentTarget: this.mirrorCamera});
                 this.renderer.render(this.mirrorScene, this.mirrorCamera, this.mirrorTarget, true);
                 this.mirrorScene.dispatchEvent({ type: "beforeRender", currentTarget: this.camera });
-
-                this.renderer.vr.enabled = currentVrEnabled;
-                this.renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
-                this.renderer.setRenderTarget(currentRenderTarget);
-
+                restoreRendererContext(this.renderer, rendererContext);
                 plane.visible = true;
             }
         };
@@ -294,28 +273,25 @@ export default class extends Object {
     }
 
     private initBufferScene(): this {
-        this.bufferRenderer = new THREE.WebGLRenderer({ alpha: true });
-        this.bufferRenderer.setSize(TEXTURE_WITDH, TEXTURE_HEIGHT);
-
-        const ctx = this.bufferContext = this.bufferRenderer.context;
+        const ctx = this.bufferContext = this.renderer.context;
 
         this.bufferTargets = new Array(3)
             .fill(null)
-            .map(() => new THREE.WebGLRenderTarget(TEXTURE_WITDH, TEXTURE_HEIGHT));
+            .map(() => new THREE.WebGLRenderTarget(TEXTURE_WIDTH, TEXTURE_HEIGHT));
 
         this.bufferScene = new THREE.Scene();
 
         this.bufferSceneCamera = new THREE.OrthographicCamera(
-            TEXTURE_WITDH / -2, TEXTURE_WITDH / 2,
+            TEXTURE_WIDTH / -2, TEXTURE_WIDTH / 2,
             TEXTURE_HEIGHT / 2, TEXTURE_HEIGHT / -2,
             0.1, 2);
 
         this.bufferSceneCamera.position.set(0, 1, 0);
         this.bufferSceneCamera.lookAt(this.bufferScene.position);
 
-        const geometry = new THREE.PlaneGeometry(TEXTURE_WITDH, TEXTURE_HEIGHT, 1, 1);
+        const geometry = new THREE.PlaneGeometry(TEXTURE_WIDTH, TEXTURE_HEIGHT, 1, 1);
 
-        const textureData = new Uint8Array(TEXTURE_WITDH * TEXTURE_HEIGHT * 4).map((el, index) => {
+        const textureData = new Uint8Array(TEXTURE_WIDTH * TEXTURE_HEIGHT * 4).map((el, index) => {
             if (index % 4 === 3) {
                 return 128;
             }
@@ -325,7 +301,7 @@ export default class extends Object {
 
         const texture = new THREE.DataTexture(
             textureData,
-            TEXTURE_WITDH,
+            TEXTURE_WIDTH,
             TEXTURE_HEIGHT,
             THREE.RGBAFormat,
             THREE.UnsignedByteType,
@@ -339,6 +315,7 @@ export default class extends Object {
         texture.needsUpdate = true;
 
         const textureClone = texture.clone();
+
         textureClone.needsUpdate = true;
 
         const delta = 1 / 60;
@@ -376,11 +353,13 @@ export default class extends Object {
         plane.rotation.set(-Math.PI / 2, 0, 0);
         this.bufferScene.add(plane);
 
+        const rendererContext = cleanUpRendererContext(this.renderer);
+
         this.bufferTargets.forEach((target: THREE.WebGLRenderTarget) => {
-            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, target);
+            this.renderer.render(this.bufferScene, this.bufferSceneCamera, target);
         });
 
-        const textureUnit = this.bufferRenderer.properties.get(this.getBufferMap()).__webglTexture;
+        const textureUnit = this.renderer.properties.get(this.getBufferMap()).__webglTexture;
         const activeTextureUnit = ctx.getParameter(ctx.TEXTURE_BINDING_2D);
 
         ctx.bindTexture(ctx.TEXTURE_2D, textureUnit);
@@ -389,7 +368,7 @@ export default class extends Object {
             ctx.TEXTURE_2D,
             0,
             ctx.RGBA,
-            TEXTURE_WITDH,
+            TEXTURE_WIDTH,
             TEXTURE_HEIGHT,
             0,
             ctx.RGBA,
@@ -400,9 +379,10 @@ export default class extends Object {
         ctx.bindTexture(ctx.TEXTURE_2D, activeTextureUnit);
 
         this.bufferTargets.forEach((target: THREE.WebGLRenderTarget) => {
-            this.bufferRenderer.render(this.bufferScene, this.bufferSceneCamera, target);
+            this.renderer.render(this.bufferScene, this.bufferSceneCamera, target);
         });
 
+        restoreRendererContext(this.renderer, rendererContext);
         this.loadObstacleMap();
 
         return this;

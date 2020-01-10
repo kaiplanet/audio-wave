@@ -2,7 +2,7 @@ import { Sine } from "gsap/all";
 import * as THREE from "three";
 import "three/examples/js/objects/Lensflare";
 
-import CelestialBody from "./CelestialBody";
+import CelestialBody from "../CelestialBody";
 
 import { LENSFLARE_0, LENSFLARE_1 } from "../../assets/assets";
 import { loadTexture } from "../../utils";
@@ -24,7 +24,13 @@ export default class Sun extends CelestialBody {
         this.sprite.material.opacity = opacity;
 
         if (this.light) {
-            this.light.intensity = this.intensity * opacity;
+            if (opacity <= 0) {
+                this.light.intensity = 0;
+
+                return;
+            }
+
+            this.light.intensity = this.intensityMin + this.intensityRange * opacity;
         }
 
         this.radiances.forEach((lensflareElement) => lensflareElement.size = RADIANCE_SIZE * opacity);
