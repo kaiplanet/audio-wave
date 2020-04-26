@@ -1,7 +1,7 @@
 varying vec2 vUv;
 
 const float pi = abs(asin(1.0)) * 2.0;
-const float twoPi = pi * 2.0;
+const float doublePi = pi * 2.0;
 const float halfPi = pi * 0.5;
 const vec2 axisPhi = vec2(1.0, 0.0);
 const vec3 axisTheta = vec3(0.0, 0.0, 1.0);
@@ -25,7 +25,7 @@ void main() {
     }
 
     float absPhi = acos(dot(axisPhi, normalize(vec2(x, y))));
-    float phi = (y > 0.0 ? absPhi : twoPi - absPhi) / twoPi;
+    float phi = (y > 0.0 ? absPhi : doublePi - absPhi) / doublePi;
     float theta = acos(dot(axisTheta, normalize(coords))) / pi;
     vec3 sphCoords = vec3(r, phi, theta);
     float noise = snoise(sphCoords * 4.0);
@@ -36,5 +36,10 @@ void main() {
         noiseFixed = noise * (1.0 - (1.0 - CONDENSE_HEAT_THRESHOLD) * sin(easingProgress * halfPi));
     }
 
-    gl_FragColor = vec4(noiseFixed + noiseFixed * (snoise(coords * 4.0) - 0.5) * 2.0 + noiseFixed * (snoise(coords * 16.0) - 0.5), 0.0, 0.0, 0.0);
+    float heat = noiseFixed + noiseFixed * (snoise(coords * 4.0) - 0.5) * 2.0 + noiseFixed * (snoise(coords * 16.0) - 0.5);
+    float heatDiff = heat - CONDENSE_HEAT_THRESHOLD;
+    float density = heatDiff > 0.0 ? heatDiff / (1.0 - CONDENSE_HEAT_THRESHOLD) : 0.0;
+    float dissipationValue = density == 0.0 ? 0.0 : snoise(coords);
+
+    gl_FragColor = vec4(density, dissipationValue, 0.0, 0.0);
 }

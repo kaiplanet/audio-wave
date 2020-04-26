@@ -15,6 +15,20 @@ toolBar.querySelector(".stop").addEventListener("click", () => {
     audioWaves.stop();
 });
 
+toolBar.querySelector(".cloud-start").addEventListener("click", () => {
+    // @ts-ignore
+    audioWaves.clouds.forEach((cloud) => {
+        cloud.startSimulation();
+    });
+});
+
+toolBar.querySelector(".cloud-stop").addEventListener("click", () => {
+    // @ts-ignore
+    audioWaves.clouds.forEach((cloud) => {
+        cloud.stopSimulation();
+    });
+});
+
 toolBar.querySelector(".switch-to-day").addEventListener("click", () => {
     audioWaves.switchToDay();
 });
@@ -59,6 +73,14 @@ toolBar.querySelector(".generate-wave").addEventListener("click", () => {
 
 const demo = () => {
     audioWaves.start();
+
+    requestAnimationFrame(() => {
+        // @ts-ignore
+        audioWaves.clouds.forEach((cloud) => {
+            cloud.stopSimulation();
+        });
+    });
+
     setTimeout(() => audioWaves.generateWave(new ImageData(waveSourceTextureData, 64, 64), { x: 0, y: .5 }), 0);
     setTimeout(() => audioWaves.generateWave(new ImageData(waveSourceTextureData, 64, 64), { x: 0, y: -.5 }), 1000);
     setTimeout(() => audioWaves.generateWave(new ImageData(waveSourceTextureData, 64, 64), { x: .3, y: .5 }), 2000);
@@ -68,6 +90,11 @@ const demo = () => {
     setTimeout(() => audioWaves.generateWave(new ImageData(waveSourceTextureData, 64, 64), { x: 0, y: -.5 }), 6000);
     setTimeout(() => audioWaves.switchToDay(), 8000);
     setTimeout(() => audioWaves.generateWave(new ImageData(waveSourceTextureData, 64, 64), { x: 0, y: -.5 }), 12000);
+
+    // @ts-ignore
+    setTimeout(() => audioWaves.clouds.forEach((cloud) => {
+        cloud.startSimulation();
+    }), 12000);
 };
 
 setTimeout(demo, 3000);

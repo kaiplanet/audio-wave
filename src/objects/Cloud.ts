@@ -109,15 +109,14 @@ export default class Cloud extends Object {
         };
 
         const tick = () => {
-            simulationTick();
-
             if (this.active) {
+                simulationTick();
                 requestAnimationFrame(tick);
             }
         };
 
         this.active = true;
-        tick();
+        requestAnimationFrame(tick);
 
         return this;
     }
@@ -165,7 +164,7 @@ export default class Cloud extends Object {
                         intensity: 0,
                         position: {},
                     },
-                    
+
                     value: new Array(this.directionLightNumber).fill(null).map(() => ({
                         color: new THREE.Color(),
                         intensity: 1,

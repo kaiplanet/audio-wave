@@ -31,6 +31,7 @@ switch (process.env.NODE_ENV) {
         GRASS_TEXTURE = "https://audio-waves.oss-cn-shanghai.aliyuncs.com/grass.dds";
 
         break;
+
     case "development":
     default:
         BACKGROUND_NIGHT_PX = BACKGROUND_NIGHT_PX_LOCAL;
@@ -40,9 +41,6 @@ switch (process.env.NODE_ENV) {
         BACKGROUND_NIGHT_PZ = BACKGROUND_NIGHT_PZ_LOCAL;
         BACKGROUND_NIGHT_NZ = BACKGROUND_NIGHT_NZ_LOCAL;
         GRASS_TEXTURE = GRASS_TEXTURE_LOCAL;
-}
-
-if (process.env.NODE_ENV === "production") {
 }
 
 export { BACKGROUND_DAY_NX, BACKGROUND_DAY_PX, BACKGROUND_DAY_NY, BACKGROUND_DAY_PY, BACKGROUND_DAY_NZ,

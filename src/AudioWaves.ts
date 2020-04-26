@@ -21,7 +21,7 @@ const MOON_DIRECTION = new THREE.Vector3(0, 1, -8);
 const MOON_RISE_DIRECTION = new THREE.Vector3(-3, 0, -5);
 const MOON_SET_DIRECTION = new THREE.Vector3(3, 0, -5);
 const MOON_INTENSITY = 1.5;
-const CLOUD_DIRECTIONS = [new THREE.Vector3(-1, .6, -8)];
+const CLOUD_DIRECTIONS = [new THREE.Vector3(-1, 1.4, -8)];
 
 interface IAudioWaves {
     init(width: number, height: number): Promise<this>;
@@ -121,6 +121,7 @@ export default class implements IAudioWaves {
                 requestAnimationFrame(render);
             }
 
+            this.background.update(); // TODO: remove this line add find a better way to update the clouds.
             this.renderer.render(this.scene, this.camera);
         };
 

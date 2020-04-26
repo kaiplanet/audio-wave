@@ -8,7 +8,7 @@ import { animate } from "../utils";
 
 const SPRITE_DISTANCE = 1;
 const TEXTURE_RESOLUTION = 256;
-const INTENSITY_VARY_RANGE_RATIO = .3;
+const INTENSITY_VARY_RANGE_RATIO = .8;
 
 const getRotationAxis = (a: THREE.Vector3, b: THREE.Vector3): THREE.Vector3 => {
     const crosssProduct =  a.clone().cross(b);
@@ -47,7 +47,7 @@ export default abstract class CelestialBody extends Object implements ICelestial
 
     protected set intensity(intensity: number) {
         this.privateIntensity = intensity;
-        this.intensityRange = intensity - intensity * CelestialBody.intensityRangeRatio;
+        this.intensityRange = intensity * CelestialBody.intensityRangeRatio;
         this.intensityMin = intensity - this.intensityRange;
     }
 
